@@ -26,10 +26,10 @@ export default function CVView() {
   };
 
   return (
-    <div style={{ background: '#FAF9F6', minHeight: '100vh' }}>
+    <div className="pb-20 md:pb-0" style={{ background: '#FAF9F6' }}>
       <CVGlossary onNavigate={handleNavigate} activeSection={activeSection} />
 
-      <div className="max-w-5xl mx-auto px-6 py-12">
+      <div className="max-w-5xl mx-auto px-6 py-12 min-h-screen">
         {/* AI Assistant Banner */}
         <div
           className="mb-8 p-4 rounded-2xl flex items-center justify-between"
@@ -124,7 +124,7 @@ export default function CVView() {
           <div className="space-y-6">
             <div>
               <h3 className="text-xl font-semibold mb-4" style={{ color: '#8B9A7E' }}>
-                Peer-Reviewed Publications ({publications.length})
+                Publications ({publications.length})
               </h3>
               <div className="space-y-4">
                 {publications.map((pub, index) => (

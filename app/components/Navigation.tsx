@@ -7,48 +7,50 @@ interface NavigationProps {
 
 export default function Navigation({ activeTab, onTabChange }: NavigationProps) {
   return (
-    <nav
-      className="sticky top-0 z-40 backdrop-blur-sm"
-      style={{ background: 'rgba(250, 249, 246, 0.95)', borderBottom: '1px solid #E8E6E1' }}
-    >
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo/Name */}
-          <div className="font-semibold text-base" style={{ color: '#2B2B2B' }}>
-            Patrick Herbert <span style={{ color: '#A89080' }}>|</span>{' '}
-            <span className="font-normal" style={{ color: '#8B9A7E' }}>
-              ML Engineer
-            </span>
-          </div>
-
-          {/* Tabs - Centered */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <div className="flex gap-1 p-1 rounded-full" style={{ background: '#F5F1E8' }}>
-              <button
-                onClick={() => onTabChange('home')}
-                className="px-6 py-2 rounded-full font-medium transition-all duration-300"
-                style={{
-                  background: activeTab === 'home' ? '#8B9A7E' : 'transparent',
-                  color: activeTab === 'home' ? '#FAF9F6' : '#A89080',
-                }}
-              >
-                Home
-              </button>
-              <button
-                onClick={() => onTabChange('cv')}
-                className="px-6 py-2 rounded-full font-medium transition-all duration-300"
-                style={{
-                  background: activeTab === 'cv' ? '#8B9A7E' : 'transparent',
-                  color: activeTab === 'cv' ? '#FAF9F6' : '#A89080',
-                }}
-              >
-                View CV
-              </button>
+    <>
+      {/* Desktop Navigation - Top */}
+      <nav
+        className="hidden md:block sticky top-0 z-50 backdrop-blur-sm"
+        style={{ background: 'rgba(250, 249, 246, 0.95)', borderBottom: '1px solid #E8E6E1' }}
+      >
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo/Name */}
+            <div className="font-semibold text-base" style={{ color: '#2B2B2B' }}>
+              Patrick Herbert <span style={{ color: '#A89080' }}>|</span>{' '}
+              <span className="font-normal" style={{ color: '#8B9A7E' }}>
+                ML Engineer
+              </span>
             </div>
-          </div>
 
-          {/* Social Icons */}
-          <div className="flex items-center gap-3">
+            {/* Tabs - Centered */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <div className="flex gap-1 p-1 rounded-full" style={{ background: '#F5F1E8' }}>
+                <button
+                  onClick={() => onTabChange('home')}
+                  className="px-6 py-2 rounded-full font-medium transition-all duration-300"
+                  style={{
+                    background: activeTab === 'home' ? '#8B9A7E' : 'transparent',
+                    color: activeTab === 'home' ? '#FAF9F6' : '#A89080',
+                  }}
+                >
+                  Home
+                </button>
+                <button
+                  onClick={() => onTabChange('cv')}
+                  className="px-6 py-2 rounded-full font-medium transition-all duration-300"
+                  style={{
+                    background: activeTab === 'cv' ? '#8B9A7E' : 'transparent',
+                    color: activeTab === 'cv' ? '#FAF9F6' : '#A89080',
+                  }}
+                >
+                  View CV
+                </button>
+              </div>
+            </div>
+
+            {/* Social Icons */}
+            <div className="flex items-center gap-3">
             <a
               href="mailto:pherbert.research@gmail.com"
               className="transition-colors"
@@ -93,5 +95,54 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
         </div>
       </div>
     </nav>
+
+      {/* Mobile Navigation - Top (Logo/Name only) */}
+      <nav
+        className="md:hidden sticky top-0 z-50 backdrop-blur-sm"
+        style={{ background: 'rgba(250, 249, 246, 0.95)', borderBottom: '1px solid #E8E6E1' }}
+      >
+        <div className="px-6 py-4">
+          <div className="text-center">
+            <div className="font-semibold text-base" style={{ color: '#2B2B2B' }}>
+              Patrick Herbert <span style={{ color: '#A89080' }}>|</span>{' '}
+              <span className="font-normal" style={{ color: '#8B9A7E' }}>
+                ML Engineer
+              </span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile Navigation - Bottom Tabs */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-sm pb-safe"
+        style={{ background: 'rgba(250, 249, 246, 0.98)', borderTop: '1px solid #E8E6E1' }}
+      >
+        <div className="px-6 py-3">
+          <div className="flex gap-1 p-1 rounded-full" style={{ background: '#F5F1E8' }}>
+            <button
+              onClick={() => onTabChange('home')}
+              className="flex-1 px-6 py-2 rounded-full font-medium transition-all duration-300"
+              style={{
+                background: activeTab === 'home' ? '#8B9A7E' : 'transparent',
+                color: activeTab === 'home' ? '#FAF9F6' : '#A89080',
+              }}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => onTabChange('cv')}
+              className="flex-1 px-6 py-2 rounded-full font-medium transition-all duration-300"
+              style={{
+                background: activeTab === 'cv' ? '#8B9A7E' : 'transparent',
+                color: activeTab === 'cv' ? '#FAF9F6' : '#A89080',
+              }}
+            >
+              View CV
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

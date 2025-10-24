@@ -15,8 +15,8 @@ export default function CVGlossary({ onNavigate, activeSection }: CVGlossaryProp
 
   return (
     <div
-      className="sticky top-[73px] z-30 backdrop-blur-sm py-4"
-      style={{ background: 'rgba(250, 249, 246, 0.95)', borderBottom: '1px solid #E8E6E1' }}
+      className="sticky top-[56px] md:top-[57px] z-40 backdrop-blur-sm py-4"
+      style={{ background: 'rgba(250, 249, 246, 1)', borderBottom: '1px solid #E8E6E1', marginTop: '-2px' }}
     >
       <div className="max-w-6xl mx-auto px-6">
         <nav className="flex gap-6 overflow-x-auto">

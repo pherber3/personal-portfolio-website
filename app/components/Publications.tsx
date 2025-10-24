@@ -5,19 +5,16 @@ import { publications } from '../data/publications';
 
 export default function Publications() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const displayedPublications = isExpanded ? publications : [publications[0]];
+  const displayedPublications = isExpanded ? publications : publications.slice(0, 2);
 
   return (
     <section className="py-20 px-6" style={{ background: '#E8E6E1' }}>
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-4xl md:text-5xl font-bold mb-4 text-center" style={{ color: '#2B2B2B' }}>
+        <h2 className="text-4xl md:text-5xl font-bold mb-12 text-center" style={{ color: '#2B2B2B' }}>
           Publications
         </h2>
-        <p className="text-center mb-12" style={{ color: '#A89080' }}>
-          {publications.length} peer-reviewed publications
-        </p>
 
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {displayedPublications.map((pub, index) => (
             <div
               key={index}

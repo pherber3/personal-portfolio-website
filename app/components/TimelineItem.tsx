@@ -24,7 +24,7 @@ export default function TimelineItem({ experience, isLast }: TimelineItemProps) 
       {/* Timeline dot */}
       <div className="flex items-start gap-6">
         <div
-          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-1"
+          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-1 relative z-10"
           style={{
             background: isExpanded ? '#8B9A7E' : '#FAF9F6',
             border: `2px solid ${isExpanded ? '#8B9A7E' : '#E8E6E1'}`,
