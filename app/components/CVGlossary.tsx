@@ -19,12 +19,12 @@ export default function CVGlossary({ onNavigate, activeSection }: CVGlossaryProp
       style={{ background: 'rgba(250, 249, 246, 1)', borderBottom: '1px solid #E8E6E1', marginTop: '-2px' }}
     >
       <div className="max-w-6xl mx-auto px-6">
-        <nav className="flex gap-6 overflow-x-auto">
+        <nav className="flex gap-6 overflow-x-auto pb-3">
           {sections.map((section) => (
             <button
               key={section.id}
               onClick={() => onNavigate(section.id)}
-              className="whitespace-nowrap pb-2 font-medium transition-all duration-300"
+              className="whitespace-nowrap pb-2 font-medium transition-all duration-300 flex-shrink-0"
               style={{
                 color: activeSection === section.id ? '#8B9A7E' : '#A89080',
                 borderBottom: activeSection === section.id ? '2px solid #8B9A7E' : '2px solid transparent',

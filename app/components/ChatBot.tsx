@@ -109,42 +109,61 @@ export default function ChatBot() {
           aria-label="Toggle chat"
         >
           {isOpen ? (
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        ) : (
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-            />
-          </svg>
-        )}
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              />
+            </svg>
+          )}
         </button>
       </div>
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-[400px] h-[600px] rounded-3xl shadow-2xl flex flex-col z-50" style={{ background: '#FAF9F6', border: '1px solid #E8E6E1' }}>
+        <div className="fixed bottom-24 md:bottom-24 right-4 md:right-6 w-[calc(100vw-2rem)] md:w-[400px] h-[calc(100vh-8rem)] md:h-[600px] max-h-[600px] rounded-3xl shadow-2xl flex flex-col z-50" style={{ background: '#FAF9F6', border: '1px solid #E8E6E1' }}>
           {/* Header */}
-          <div className="px-6 py-4 rounded-t-3xl" style={{ background: '#8B9A7E', color: '#FAF9F6' }}>
+          <div className="px-6 py-4 rounded-t-3xl relative" style={{ background: '#8B9A7E', color: '#FAF9F6' }}>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center"
+              aria-label="Close chat"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
             <h3 className="font-semibold text-lg">AI Assistant</h3>
             <p className="text-xs mt-1" style={{ color: '#F5F1E8' }}>
               Ask detailed questions about projects, tech stacks, or implementations

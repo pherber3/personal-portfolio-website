@@ -51,3 +51,31 @@ html {
   background-size: 200% 200%;
   animation: shimmer 3s ease-in-out infinite;
 }
+
+/* Custom scrollbar styling for horizontal navigation */
+nav::-webkit-scrollbar {
+  height: 8px;
+  -webkit-appearance: none;
+}
+
+nav::-webkit-scrollbar-track {
+  background: #E8E6E1;
+  border-radius: 4px;
+  margin: 0 4px;
+}
+
+nav::-webkit-scrollbar-thumb {
+  background: #A89080;
+  border-radius: 4px;
+  min-width: 40px;
+}
+
+nav::-webkit-scrollbar-thumb:hover {
+  background: #8B9A7E;
+}
+
+/* Force scrollbar to always be visible */
+nav {
+  scrollbar-width: thin;
+  scrollbar-color: #A89080 #E8E6E1;
+}
