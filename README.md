@@ -1,11 +1,11 @@
-# Patrick Herbert - Portfolio Website
+# Portfolio Website
 
 A professional portfolio website with an AI-powered chatbot that answers questions about Patrick Herbert's experience, skills, and publications.
 
 ## Features
 
 - Clean, Apple/Anthropic-inspired design
-- Interactive AI chatbot powered by Google Gemini 1.5 Flash
+- Interactive AI chatbot powered by Google Gemini 2.0 Flash Lite
 - Markdown rendering for chat responses
 - Typing indicators for better UX
 - Responsive design for all devices
@@ -20,25 +20,6 @@ A professional portfolio website with an AI-powered chatbot that answers questio
 - **Markdown**: react-markdown with remark-gfm
 - **Deployment**: Vercel
 
-## Prerequisites
-
-**Important**: This project requires Node.js >= 20.9.0
-
-You are currently using Node.js 18.12.1. Please upgrade Node.js before running the development server.
-
-### Install Node.js 20+
-
-**Option 1: Using nvm (Node Version Manager) - Recommended**
-```bash
-# Install nvm from: https://github.com/coreybutler/nvm-windows
-# Then install Node 20:
-nvm install 20
-nvm use 20
-```
-
-**Option 2: Direct Download**
-Download from: https://nodejs.org/ (LTS version)
-
 ## Setup
 
 1. **Install dependencies**:
@@ -47,10 +28,7 @@ cd d:\Projects\portfolio-site
 npm install
 ```
 
-2. **Environment variables** are already configured in `.env.local`:
-```
-GEMINI_API_KEY=AIzaSyBmdiXbM30j_rrVv8WaQPOYg3nwujf8qwY
-```
+2. **Environment variables** are already configured in `.env.local`
 
 3. **Run the development server**:
 ```bash
@@ -79,50 +57,6 @@ portfolio-site/
 ├── .env.local                   # Environment variables
 └── package.json
 ```
-
-## Deployment to Vercel
-
-### Quick Deploy
-
-1. **Install Vercel CLI** (if not already installed):
-```bash
-npm install -g vercel
-```
-
-2. **Deploy**:
-```bash
-cd d:\Projects\portfolio-site
-vercel
-```
-
-Follow the prompts:
-- Set up and deploy? **Y**
-- Which scope? Select your account
-- Link to existing project? **N**
-- Project name? **portfolio-site** (or your choice)
-- In which directory is your code located? **./**
-- Want to override settings? **N**
-
-3. **Set environment variables in Vercel**:
-```bash
-vercel env add GEMINI_API_KEY
-```
-Paste your API key when prompted.
-
-4. **Deploy to production**:
-```bash
-vercel --prod
-```
-
-### Deploy via Vercel Dashboard
-
-1. Push your code to GitHub
-2. Go to [vercel.com](https://vercel.com)
-3. Import your repository
-4. Add environment variable:
-   - Key: `GEMINI_API_KEY`
-   - Value: `AIzaSyBmdiXbM30j_rrVv8WaQPOYg3nwujf8qwY`
-5. Deploy!
 
 ## Customization
 
@@ -163,21 +97,6 @@ Response:
   "message": "Patrick has extensive experience...",
   "timestamp": "2025-10-23T03:49:01.157Z"
 }
-```
-
-## Troubleshooting
-
-### Node Version Error
-If you see "Node.js version >= 20.9.0 is required", upgrade Node.js (see Prerequisites above).
-
-### API Key Error
-Make sure `.env.local` exists and contains your `GEMINI_API_KEY`.
-
-### Build Errors
-Try clearing Next.js cache:
-```bash
-rm -rf .next
-npm run dev
 ```
 
 ## License
