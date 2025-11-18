@@ -1,81 +1,68 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAF9F6;
-  --foreground: #2B2B2B;
-  --cream: #F5F1E8;
-  --warm-gray: #E8E6E1;
-  --sage: #8B9A7E;
-  --taupe: #A89080;
-  --charcoal: #2B2B2B;
+  /* Clean Academic Palette */
+  --background: #FDFCFB; /* High-quality paper white */
+  --foreground: #1A1A1A; /* Ink black */
+  
+  --paper-offset: #F4F2ED; /* Slightly darker paper for cards */
+  --border-color: #E5E2D9;
+  
+  /* Academic Green */
+  --accent-primary: #3A4D39; /* Deep Forest/Library Green */
+  --accent-secondary: #738F70; /* Sage */
+  
+  --muted: #787570;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-paper: var(--paper-offset);
+  --color-accent: var(--accent-primary);
+  --color-muted: var(--muted);
+  --color-border: var(--border-color);
+  
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-newsreader);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em;
 }
 
-html {
-  scroll-behavior: smooth;
+/* Typography Standards */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
-@keyframes shimmer {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
+/* Elegant Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
 }
-
-.animate-shimmer {
-  background: linear-gradient(
-    110deg,
-    #8B9A7E 0%,
-    #8B9A7E 40%,
-    #9AAA8E 50%,
-    #8B9A7E 60%,
-    #8B9A7E 100%
-  );
-  background-size: 200% 200%;
-  animation: shimmer 3s ease-in-out infinite;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-/* Custom scrollbar styling for horizontal navigation */
-nav::-webkit-scrollbar {
-  height: 8px;
-  -webkit-appearance: none;
-}
-
-nav::-webkit-scrollbar-track {
-  background: #E8E6E1;
+::-webkit-scrollbar-thumb {
+  background: #D1CEC7;
   border-radius: 4px;
-  margin: 0 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
 }
 
-nav::-webkit-scrollbar-thumb {
-  background: #A89080;
-  border-radius: 4px;
-  min-width: 40px;
+/* Utility for citations */
+.citation-hover {
+  transition: all 0.2s ease;
 }
-
-nav::-webkit-scrollbar-thumb:hover {
-  background: #8B9A7E;
-}
-
-/* Force scrollbar to always be visible */
-nav {
-  scrollbar-width: thin;
-  scrollbar-color: #A89080 #E8E6E1;
+.citation-hover:hover {
+  background-color: rgba(58, 77, 57, 0.05);
+  border-color: var(--accent-primary);
 }

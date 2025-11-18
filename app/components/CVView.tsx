@@ -14,7 +14,8 @@ export default function CVView() {
     setActiveSection(sectionId);
     const element = document.getElementById(sectionId);
     if (element) {
-      const offset = 150; // Account for sticky headers
+      // Increased offset because the sticky header is now taller (covering top 0-100px)
+      const offset = 140; 
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
 
@@ -26,93 +27,87 @@ export default function CVView() {
   };
 
   return (
-    <div className="pb-20 md:pb-0" style={{ background: '#FAF9F6' }}>
+    <div className="min-h-screen bg-[#FDFCFB] pb-32">
       <CVGlossary onNavigate={handleNavigate} activeSection={activeSection} />
 
-      <div className="max-w-5xl mx-auto px-6 py-12 min-h-screen">
-        {/* AI Assistant Banner */}
-        <div
-          className="mb-8 p-4 rounded-2xl flex items-center justify-between"
-          style={{ background: '#F5F1E8', border: '1px solid #E8E6E1' }}
-        >
-          <div className="flex items-center gap-3">
-            <svg
-              className="w-6 h-6 flex-shrink-0"
-              fill="none"
-              stroke="#8B9A7E"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              />
-            </svg>
-            <p className="text-sm" style={{ color: '#2B2B2B' }}>
-              Want more technical details? <span className="font-medium" style={{ color: '#8B9A7E' }}>Ask the AI assistant</span> about specific projects, implementations, or technologies.
-            </p>
+      {/* Reduced top padding (py-8 instead of py-16) since Glossary has its own padding now */}
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        
+        {/* Header */}
+        <div className="mb-12 pb-8 border-b border-[#E5E2D9]">
+          <h1 className="text-4xl md:text-5xl font-serif text-[#1A1A1A] mb-4">
+            Curriculum Vitae
+          </h1>
+          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8 text-sm font-mono text-[#787570]">
+             <span>UPDATED: NOV 2025</span>
+             <span className="hidden md:inline text-[#E5E2D9]">|</span>
+             <span>CHICAGO, IL</span>
+             <span className="hidden md:inline text-[#E5E2D9]">|</span>
+             <button 
+               onClick={() => window.print()} 
+               className="hover:text-[#3A4D39] transition-colors underline decoration-[#E5E2D9] underline-offset-4"
+             >
+               PRINT / SAVE PDF
+             </button>
+          </div>
+        </div>
+
+        {/* AI Banner */}
+        <div className="mb-16 p-4 border-l-2 border-[#3A4D39] bg-[#F4F2ED]/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="text-sm text-[#4A4A4A]">
+            <strong className="font-serif text-[#1A1A1A] block md:inline md:mr-2">Research Assistant Available.</strong>
+            You can ask the AI about specific implementation details of any project listed below, it will access an expanded documentation of my work using <b>Retrieval-Augmented Generation (RAG)</b> to provide answers.
           </div>
           <button
             onClick={() => {
-              const chatButton = document.querySelector('[aria-label="Toggle chat"]') as HTMLButtonElement;
-              chatButton?.click();
+               const btns = Array.from(document.querySelectorAll('button'));
+               btns.find(b => b.textContent?.includes('Ask AI'))?.click();
             }}
-            className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:shadow-md flex-shrink-0"
-            style={{
-              background: '#8B9A7E',
-              color: '#FAF9F6'
-            }}
+            className="text-xs font-mono uppercase tracking-wider text-[#3A4D39] hover:text-[#1A1A1A] border border-[#E5E2D9] bg-white px-3 py-1.5 rounded-sm hover:border-[#3A4D39] transition-all whitespace-nowrap"
           >
-            Open Chat
+            Start Chat
           </button>
         </div>
 
         {/* Experience Section */}
         <CVSection id="experience" title="Professional Experience">
-          <div className="space-y-8">
+          <div className="space-y-12">
             {experiences.map((exp, index) => (
-              <div
-                key={index}
-                className="rounded-2xl p-8"
-                style={{ background: '#F5F1E8', border: '1px solid #E8E6E1' }}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-2xl font-semibold" style={{ color: '#2B2B2B' }}>
+              <div key={index} className="group">
+                <div className="md:grid md:grid-cols-[1fr_3fr] gap-8">
+                  {/* Left: Meta */}
+                  <div className="mb-2 md:mb-0">
+                    <h3 className="font-serif text-lg font-medium text-[#1A1A1A] md:hidden">
                       {exp.company}
                     </h3>
-                    <p className="text-lg mt-1" style={{ color: '#8B9A7E' }}>
-                      {exp.role}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm" style={{ color: '#A89080' }}>
+                    <div className="font-mono text-xs text-[#787570] mt-1 md:mt-0">
                       {exp.dates}
-                    </p>
-                    <p className="text-sm" style={{ color: '#A89080' }}>
-                      {exp.location}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3 mt-6">
-                  {exp.details.map((detail, idx) => (
-                    <div key={idx} className="text-sm leading-relaxed" style={{ color: '#2B2B2B' }}>
-                      <ReactMarkdown
-                        components={{
-                          p: ({ children }) => <span>{children}</span>,
-                          strong: ({ children }) => (
-                            <span className="font-semibold" style={{ color: '#8B9A7E' }}>
-                              {children}
-                            </span>
-                          ),
-                        }}
-                      >
-                        {detail}
-                      </ReactMarkdown>
                     </div>
-                  ))}
+                    <div className="font-mono text-xs text-[#787570] mt-1">
+                      {exp.location}
+                    </div>
+                  </div>
+
+                  {/* Right: Content */}
+                  <div>
+                    <h3 className="font-serif text-xl font-medium text-[#1A1A1A] hidden md:block mb-1">
+                      {exp.company}
+                    </h3>
+                    <div className="text-sm font-medium text-[#3A4D39] uppercase tracking-wide mb-4">
+                      {exp.role}
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {exp.details.map((detail, idx) => (
+                        <div key={idx} className="flex gap-3 text-sm leading-relaxed text-[#4A4A4A]">
+                          <span className="text-[#E5E2D9] select-none">→</span>
+                          <div className="prose prose-sm max-w-none prose-strong:font-medium prose-strong:text-[#1A1A1A]">
+                            <ReactMarkdown>{detail}</ReactMarkdown>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -121,98 +116,69 @@ export default function CVView() {
 
         {/* Publications Section */}
         <CVSection id="publications" title="Publications & Recognition">
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <h3 className="text-xl font-semibold mb-4" style={{ color: '#8B9A7E' }}>
-                Publications ({publications.length})
+              <h3 className="font-mono text-xs text-[#787570] uppercase tracking-widest mb-6 border-b border-[#E5E2D9] pb-2">
+                Peer-Reviewed Journals
               </h3>
               <div className="space-y-4">
                 {publications.map((pub, index) => (
-                  <div
-                    key={index}
-                    className="rounded-xl p-6"
-                    style={{ background: '#F5F1E8', border: '1px solid #E8E6E1' }}
-                  >
-                    <p className="text-sm leading-relaxed mb-2" style={{ color: '#2B2B2B' }}>
-                      {pub.authors} ({pub.year}). <strong>{pub.title}</strong>{' '}
-                      <em style={{ color: '#8B9A7E' }}>{pub.journal}</em>
-                      {pub.volume && `, ${pub.volume}`}
-                      {pub.pages && `, ${pub.pages}`}.
-                    </p>
-                    <a
-                      href={pub.doi}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm inline-flex items-center gap-1"
-                      style={{ color: '#8B9A7E' }}
-                    >
-                      {pub.doi}
+                  <div key={index} className="pl-4 border-l-2 border-transparent hover:border-[#3A4D39] transition-colors py-1">
+                    <div className="text-[#1A1A1A] font-serif font-medium">
+                      {pub.title}
+                    </div>
+                    <div className="text-sm text-[#4A4A4A] mt-1 leading-relaxed">
+                      <span className="italic">{pub.journal}</span> ({pub.year}). {pub.authors}
+                    </div>
+                    <a href={pub.doi} target="_blank" className="text-xs font-mono text-[#3A4D39] hover:underline mt-1 inline-block">
+                      DOI LINK ↗
                     </a>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4" style={{ color: '#8B9A7E' }}>
+            <div className="pt-8">
+               <h3 className="font-mono text-xs text-[#787570] uppercase tracking-widest mb-6 border-b border-[#E5E2D9] pb-2">
                 Conference Presentations
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[
-                  { conf: 'ICML 2023 - Workshop Presenter', title: 'A Flexible Transformer Architecture to Handle Irregularly Sampled Multi-modal Data and Predict Glaucoma Progression', location: 'Honolulu, HI' },
-                  { conf: 'ARVO 2023 - Speaker', title: 'The effect of achieving target intraocular pressure on optical coherence tomography worsening compared to visual field worsening', location: 'New Orleans, LA' },
-                  { conf: 'ARVO 2022 - Speaker', title: 'Forecasting Risk of Future Rapid Glaucoma Worsening Using Early Visual Field, Optical Coherence Tomography and Clinical Data', location: 'Denver, CO' },
-                  { conf: 'American Glaucoma Society 2022 - Speaker', title: 'Forecasting Risk of Future Rapid Glaucoma Worsening Using Early Visual Field, Optical Coherence Tomography and Clinical Data', location: 'Nashville, TN' },
+                  { conf: 'ICML 2023', role: 'Workshop Presenter', title: 'A Flexible Transformer Architecture to Handle Irregularly Sampled Multi-modal Data', loc: 'Honolulu, HI' },
+                  { conf: 'ARVO 2023', role: 'Speaker', title: 'Effect of achieving target intraocular pressure on OCT worsening', loc: 'New Orleans, LA' },
+                  { conf: 'ARVO 2022', role: 'Speaker', title: 'Forecasting Risk of Future Rapid Glaucoma Worsening', loc: 'Denver, CO' },
                 ].map((pres, idx) => (
-                  <div key={idx} className="text-sm" style={{ color: '#2B2B2B' }}>
-                    <strong style={{ color: '#8B9A7E' }}>{pres.conf}:</strong> "{pres.title}" ({pres.location})
+                  <div key={idx} className="grid grid-cols-[80px_1fr] gap-4 text-sm">
+                    <div className="font-mono text-[#787570] text-xs pt-1">{pres.conf}</div>
+                    <div>
+                      <div className="font-medium text-[#1A1A1A]">{pres.title}</div>
+                      <div className="text-[#4A4A4A] mt-0.5">{pres.role} • {pres.loc}</div>
+                    </div>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <h3 className="text-xl font-semibold mb-4" style={{ color: '#8B9A7E' }}>
-                Awards & Leadership
-              </h3>
-              <div className="space-y-3 text-sm" style={{ color: '#2B2B2B' }}>
-                <p>• Knights Templar Eye Foundation Award Recipient (2022, 2023)</p>
-                <p>• <strong>HopAI</strong> (2019-2021): Founded and led JHU's AI club, hosting speakers from frontier labs and organizing educational workshops</p>
-                <p>• <strong>Beta Zero Capital Management</strong> (2020-2021): Led ML team in the quantitative research club at JHU</p>
               </div>
             </div>
           </div>
         </CVSection>
 
-        {/* Technical Skills Section */}
+        {/* Skills Section */}
         <CVSection id="skills" title="Technical Expertise">
-          <div className="space-y-6">
-            <div className="rounded-2xl p-6" style={{ background: '#F5F1E8', border: '1px solid #E8E6E1' }}>
-              <h3 className="text-lg font-semibold mb-3" style={{ color: '#8B9A7E' }}>
-                Core Stack
-              </h3>
-              <p className="text-sm" style={{ color: '#2B2B2B' }}>
-                Python (PyTorch, TensorFlow, NumPy, Pandas, Polars), SQL, AWS (Bedrock, Lambda, SageMaker), Databricks
-              </p>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="p-6 bg-[#FDFCFB] border border-[#E5E2D9] rounded-sm">
+              <h3 className="font-serif text-lg text-[#1A1A1A] mb-4">Core Infrastructure</h3>
+              <div className="space-y-2 text-sm text-[#4A4A4A]">
+                <p><strong className="text-[#1A1A1A]">Languages:</strong> Python, SQL</p>
+                <p><strong className="text-[#1A1A1A]">Frameworks:</strong> PyTorch/TensorFlow/JAX, MLFlow, FastAPI, Pydantic, LangGraph</p>
+                <p><strong className="text-[#1A1A1A]">Cloud/Ops:</strong> AWS (Sagemaker/Bedrock/Cloudwatch/Lambda/Agents), Databricks, Docker, Jenkins</p>
+              </div>
             </div>
-
-            <div className="rounded-2xl p-6" style={{ background: '#F5F1E8', border: '1px solid #E8E6E1' }}>
-              <h3 className="text-lg font-semibold mb-3" style={{ color: '#8B9A7E' }}>
-                Specialized Capabilities
-              </h3>
-              <div className="space-y-4 text-sm" style={{ color: '#2B2B2B' }}>
-                <div>
-                  <strong>Optimization & Operations Research:</strong> Mixed Integer Linear Programming (MILP), Constraint Programming, Convex Optimization
-                </div>
-                <div>
-                  <strong>Model Scaling & Distributed Training:</strong> CUDA kernel programming, C++ (performance optimization), multi-GPU training & inference (ZeRO optimization, FSDP, DeepSpeed, Megatron-LM)
-                </div>
-                <div>
-                  <strong>Model Optimization:</strong> FlashAttention, ONNX runtime optimization, Quantization (GGUF, bitsandbytes, LoRA, TensorRT), Mixed precision
-                </div>
-                <div>
-                  <strong>Reinforcement Learning:</strong> PPO, DPO/GRPO for RLAIF, LORA fine-tuning (Unsloth, Tinker)
-                </div>
+            
+            <div className="p-6 bg-[#FDFCFB] border border-[#E5E2D9] rounded-sm">
+              <h3 className="font-serif text-lg text-[#1A1A1A] mb-4">Specialized Subjects</h3>
+              <div className="space-y-2 text-sm text-[#4A4A4A]">
+                <p><strong className="text-[#1A1A1A]">Optimization:</strong> Linear Programming, Convex Optimization, Evolutionary Algos</p>
+                <p><strong className="text-[#1A1A1A]">Architectures:</strong> Transformers, Multimodal Fusion, Quantization for Fine-tuning, RL, and Inference</p>
+                <p><strong className="text-[#1A1A1A]">Performance:</strong> TensorRT, ONNX, C++/CUDA, Triton, Mojo, NVIDIA Dynamo, NVIDIA Nsight & PyTorch Profiler</p>
               </div>
             </div>
           </div>
@@ -220,19 +186,17 @@ export default function CVView() {
 
         {/* Education Section */}
         <CVSection id="education" title="Education">
-          <div className="rounded-2xl p-6" style={{ background: '#F5F1E8', border: '1px solid #E8E6E1' }}>
-            <h3 className="text-xl font-semibold mb-2" style={{ color: '#2B2B2B' }}>
-              Johns Hopkins University
-            </h3>
-            <p className="text-base mb-1" style={{ color: '#8B9A7E' }}>
-              B.S. Coursework in Applied Mathematics and Statistics
-            </p>
-            <p className="text-sm mb-4" style={{ color: '#A89080' }}>
-              2017-2021 | Baltimore, MD
-            </p>
-            <p className="text-sm" style={{ color: '#2B2B2B' }}>
-              <strong>Relevant Coursework:</strong> Applied & Computational Multilinear Algebra, Deep Learning in Discrete Optimization, Advanced Probability & Statistics
-            </p>
+          <div className="md:grid md:grid-cols-[1fr_3fr] gap-8 py-4">
+            <div className="font-mono text-xs text-[#787570] pt-1">2017 — 2021</div>
+            <div>
+              <h3 className="font-serif text-xl font-medium text-[#1A1A1A]">Johns Hopkins University</h3>
+              <div className="text-[#3A4D39] mb-2">Completed coursework in Applied Mathematics and Statistics</div>
+              <p className="text-sm text-[#4A4A4A] leading-relaxed">
+                Focus in Optimization and Deep Learning
+                <br />
+                <span className="italic text-[#787570]">Leadership: Founder of HopAI (JHU Artificial Intelligence Society)</span>
+              </p>
+            </div>
           </div>
         </CVSection>
       </div>

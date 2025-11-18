@@ -28,11 +28,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read detailed experience content from public directory for chatbot
     const cvPath = join(process.cwd(), 'public', 'detailed-experience.md');
     const cvContent = readFileSync(cvPath, 'utf-8');
 
-    // Generate response using Gemini
     const response = await generateChatResponse(
       cvContent,
       history || [],
@@ -43,8 +41,24 @@ export async function POST(request: NextRequest) {
       message: response,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Chat API error:', error);
+
+    // Check for specific Gemini API errors
+    if (error.message?.includes('429') || error.status === 429) {
+       return NextResponse.json(
+        { error: 'Rate limit exceeded. Please wait a moment before trying again.' },
+        { status: 429 }
+      );
+    }
+
+    if (error.message?.includes('400') || error.status === 400) {
+       return NextResponse.json(
+        { error: 'Invalid request format. Please try refreshing the chat.' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: 'Failed to generate response',

@@ -1,4 +1,6 @@
-# Portfolio Site - Development Guide
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -8,8 +10,9 @@ This is a professional portfolio website built with **Next.js 16** featuring an 
 - **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS 4 + PostCSS
-- **AI/LLM:** Google Generative AI (Gemini 2.0 Flash Lite)
+- **AI/LLM:** Google Generative AI (Gemini)
 - **Markdown:** react-markdown with remark-gfm
+- **Analytics:** Vercel Analytics & Speed Insights
 - **Deployment:** Vercel
 - **Runtime:** Node.js >= 20.9.0
 
@@ -214,17 +217,6 @@ npm run build
 - Check browser console for errors
 - Verify GEMINI_API_KEY is valid
 - Test API manually with curl
-
-## Future Enhancements
-
-- Response caching for common questions
-- Dark mode toggle
-- Multi-language support
-- Analytics integration
-- Export conversation as PDF
-- Support for multiple AI providers
-- Blog section with MDX
-- Search functionality
 
 ## Resources
 

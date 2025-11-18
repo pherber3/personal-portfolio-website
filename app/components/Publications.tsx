@@ -5,63 +5,44 @@ import { publications } from '../data/publications';
 
 export default function Publications() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const displayedPublications = isExpanded ? publications : publications.slice(0, 2);
+  const displayedPublications = isExpanded ? publications : publications.slice(0, 3);
 
   return (
-    <section className="py-20 px-6" style={{ background: '#E8E6E1' }}>
+    <section className="py-20 px-6 border-t border-[#E5E2D9]">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-4xl md:text-5xl font-bold mb-12 text-center" style={{ color: '#2B2B2B' }}>
-          Publications
-        </h2>
+        <div className="flex items-end justify-between mb-12">
+           <h2 className="text-3xl font-serif text-[#1A1A1A]">
+             Selected Publications
+           </h2>
+           <span className="hidden md:inline font-mono text-xs text-[#787570]">
+             INDEX: {publications.length} ITEMS
+           </span>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-0 divide-y divide-[#E5E2D9]">
           {displayedPublications.map((pub, index) => (
             <div
               key={index}
-              className="rounded-2xl p-6"
-              style={{ background: '#FAF9F6', border: '1px solid #E8E6E1' }}
+              className="group py-6 citation-hover rounded-lg px-4 -mx-4"
             >
-              <h3 className="text-lg font-semibold mb-2" style={{ color: '#2B2B2B' }}>
-                {pub.title}
+              <h3 className="text-lg font-serif font-medium text-[#1A1A1A] mb-2 group-hover:text-[#3A4D39] transition-colors">
+                <a href={pub.doi} target="_blank" rel="noopener noreferrer">
+                  {pub.title}
+                </a>
               </h3>
-              <p className="text-sm mb-2" style={{ color: '#A89080' }}>
-                {pub.authors}
-              </p>
-              <p className="text-sm mb-3" style={{ color: '#8B9A7E' }}>
-                <em>{pub.journal}</em> ({pub.year})
-                {pub.volume && `, ${pub.volume}`}
-                {pub.pages && `: ${pub.pages}`}
-              </p>
-              <a
-                href={pub.doi}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm inline-flex items-center gap-1 transition-colors"
-                style={{ color: '#8B9A7E' }}
-                onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
-              >
-                View Publication
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
+              <div className="text-sm text-[#4A4A4A] leading-relaxed">
+                <span className="italic">{pub.journal}</span> ({pub.year}) • {pub.authors}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Expand/Collapse button */}
-        <div className="mt-8 text-center">
+        <div className="mt-10 text-center">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="px-8 py-3 rounded-full font-medium transition-all duration-300 hover:shadow-md"
-            style={{
-              background: isExpanded ? '#FAF9F6' : '#8B9A7E',
-              color: isExpanded ? '#8B9A7E' : '#FAF9F6',
-              border: `2px solid #8B9A7E`
-            }}
+            className="text-sm font-mono text-[#787570] hover:text-[#1A1A1A] border-b border-transparent hover:border-[#1A1A1A] transition-all pb-0.5"
           >
-            {isExpanded ? 'Show Less' : `View All ${publications.length} Publications`}
+            {isExpanded ? '[ Collapse List ]' : `[ View All ${publications.length} Publications ]`}
           </button>
         </div>
       </div>

@@ -6,8 +6,8 @@ interface CVSectionProps {
 
 export default function CVSection({ id, title, children }: CVSectionProps) {
   return (
-    <section id={id} className="scroll-mt-32 mb-16">
-      <h2 className="text-3xl md:text-4xl font-bold mb-8" style={{ color: '#2B2B2B' }}>
+    <section id={id} className="scroll-mt-32 mb-20">
+      <h2 className="text-2xl md:text-3xl font-serif text-[#1A1A1A] mb-8 pb-4 border-b border-[#E5E2D9]">
         {title}
       </h2>
       {children}

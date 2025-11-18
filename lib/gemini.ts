@@ -17,6 +17,10 @@ export async function generateChatResponse(
   conversationHistory: { role: string; content: string }[],
   userMessage: string
 ) {
+  // 1. Validate and Sanitize History
+  // Remove any messages with empty/undefined content to prevent 400 errors
+  const validHistory = conversationHistory.filter(msg => msg.content && msg.content.trim().length > 0);
+
   const systemPrompt = `You are an AI assistant with access to detailed information about Patrick Herbert, an experienced AI/ML Engineer. Your role is to answer questions about Patrick's professional background, experience, and qualifications using the context provided below.
 
 Tone: Professional but conversational - not stiff or overly formal. Be helpful and engaging.
@@ -33,7 +37,7 @@ When answering:
 - You can discuss specific technologies, architectures, and implementation details that are mentioned in the context`;
 
   // Build conversation history for context
-  const chatHistory = conversationHistory.map((msg) => ({
+  const chatHistory = validHistory.map((msg) => ({
     role: msg.role === 'user' ? 'user' : 'model',
     parts: [{ text: msg.content }],
   }));
