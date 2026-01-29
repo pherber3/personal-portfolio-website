@@ -87,14 +87,15 @@ $$
 \alpha_j = \frac{\exp(q \cdot k_j / \tau)}{\sum_i \exp(q \cdot k_i / \tau)}
 $$
 
-### Physics Sidenote
-If you've seen statistical mechanics, this formula might look familiar to you. The Boltzmann distribution describes the probability of a system being in state $j$ with energy $E_j$ at temperature $T$: 
+<Callout title="Physics Sidenote">
+If you've seen statistical mechanics, this formula might look familiar. The Boltzmann distribution describes the probability of a system being in state $j$ with energy $E_j$ at temperature $T$:
 
 $$
 P(j) \propto \exp(-E_j / k_B T)
 $$
 
-Our attention formula has the same structure: $\alpha_j \propto \exp(-c_j / \tau)$. The "cost" $c_j = -q \cdot k_j$ plays the role of energy, and the temperature $\tau$ controls how sharply the distribution concentrates on low-energy (high-similarity) states. Both formulas arise from maximizing entropy subject to a constraint on expected value. In physics, that's expected energy, while in SDPA, it's expected cost. 
+Our attention formula has the same structure: $\alpha_j \propto \exp(-c_j / \tau)$, where the cost $c_j = -q \cdot k_j$ plays the role of energy. The temperature $\tau$ controls how sharply the distribution concentrates on low-energy (high-similarity) states. Both formulas arise from maximizing entropy subject to a constraint on expected value. In physics, that's expected energy, while in SDPA, it's expected cost.
+</Callout> 
 
 --- 
 
