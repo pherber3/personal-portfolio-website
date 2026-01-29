@@ -5,7 +5,6 @@ import Navigation from './components/Navigation';
 import Timeline from './components/Timeline';
 import Publications from './components/Publications';
 import CVView from './components/CVView';
-import ChatBot from './components/ChatBot';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'home' | 'cv'>('home');
@@ -144,7 +143,6 @@ export default function Home() {
         <CVView />
       )}
 
-      <ChatBot />
     </>
   );
 }

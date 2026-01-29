@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "katex/dist/katex.min.css";
 
 :root {
   /* Clean Academic Palette */
@@ -56,6 +58,23 @@ h1, h2, h3, h4, h5, h6 {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-primary);
+}
+
+/* KaTeX display math centering */
+.prose .katex-display {
+  text-align: center !important;
+  margin: 1.5em 0;
+}
+
+.prose .katex-display > .katex {
+  text-align: center !important;
+}
+
+/* Allow prose tables to break out of narrow column */
+.prose table {
+  width: calc(100% + 4rem);
+  margin-left: -2rem;
+  margin-right: -2rem;
 }
 
 /* Utility for citations */
