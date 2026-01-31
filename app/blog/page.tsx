@@ -1,10 +1,24 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllPosts } from '@/lib/blog';
 import BlogNavWrapper from './BlogNavWrapper';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Blog | Patrick Herbert',
   description: 'Technical writing on machine learning, deep learning architectures, and research.',
+  openGraph: {
+    type: 'website',
+    url: '/blog',
+    title: 'Blog | Patrick Herbert',
+    description: 'Technical writing on machine learning, deep learning architectures, and research.',
+    siteName: 'Patrick Herbert',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Blog | Patrick Herbert',
+    description: 'Technical writing on machine learning, deep learning architectures, and research.',
+  },
 };
 
 export default function BlogPage() {

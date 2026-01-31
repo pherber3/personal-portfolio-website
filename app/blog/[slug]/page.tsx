@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkMath from 'remark-math';
@@ -14,13 +15,36 @@ export function generateStaticParams() {
   return getAllPostSlugs().map(slug => ({ slug }));
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
     const post = getPostBySlug(slug);
+    const url = `https://pherbert.vercel.app/blog/${slug}`;
+
     return {
       title: `${post.meta.title} | Patrick Herbert`,
       description: post.meta.excerpt,
+      keywords: post.meta.tags,
+      authors: [{ name: 'Patrick Herbert' }],
+      openGraph: {
+        type: 'article',
+        url,
+        title: post.meta.title,
+        description: post.meta.excerpt,
+        publishedTime: post.meta.date,
+        authors: ['Patrick Herbert'],
+        tags: post.meta.tags,
+        siteName: 'Patrick Herbert',
+        locale: 'en_US',
+      },
+      twitter: {
+        card: 'summary',
+        title: post.meta.title,
+        description: post.meta.excerpt,
+      },
+      alternates: {
+        canonical: url,
+      },
     };
   } catch {
     return { title: 'Post Not Found' };
