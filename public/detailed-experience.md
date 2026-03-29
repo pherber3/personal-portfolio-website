@@ -7,6 +7,164 @@ This document contains in-depth technical details about projects, implementation
 ## GoHealth | Senior Machine Learning Engineer
 *October 2024 - Present | Chicago, IL*
 
+### Real-Time Streaming Transcription System
+
+**Business Impact:** Production transcription backend for live calls. Single-GPU benchmarks: 25 concurrent stereo calls, 261ms avg latency with full fusion, 5.6x faster than NeMo PyTorch end-to-end. Scales horizontally via AWS ECS and ALB across multiple GPU instances. At equivalent call volume, ~9x cheaper than the enterprise alternative.
+
+**Business Context:**
+- GoHealth is a tech-enabled services platform helping consumers (especially seniors) identify, compare, and enroll into insurance products like Medicare Advantage, Guaranteed Acceptance life insurance, and Hospital Indemnity
+- Sales conversations are highly regulated: representatives must identify as licensed branded agents, obtain consent, conduct needs discovery, provide unbiased comparisons, and walk through enrollment
+- Millions of calls flow through the Conversational Intelligence Platform (CIP), where transcription is the foundational input for downstream use cases like Automated Call QA (AQA)
+- Transcription errors aren't random — general-purpose models fail consistently on domain-specific vocabulary, and those tend to be exactly the terms compliance scoring depends on
+
+**System Architecture & Model Serving:**
+- Designed and built transcription backend API with PyTriton inference + WebSocket orchestration for dev/test
+- Async gRPC serving NVIDIA Parakeet TDT v3 (0.6B parameter open-source transducer model)
+- Runs on EC2 L40S GPUs, horizontally scalable via AWS ECS with ALB load balancing across multiple GPU instances
+- Evaluated 10+ ASR models across latency, cost, and quality
+  - Two categories evaluated: "Audio Understanding" models (audio encoders fused with general-purpose LLM decoders) and traditional ASR models purpose-built for STT
+  - Audio Understanding models are designed for short clips (<60s), produce no native timestamps, and are larger/slower due to LLM component
+  - For hour-long compliance calls needing word-level timing, ASR was the right fit
+  - Selected Parakeet over AWS Transcribe and WhisperX for strong baseline accuracy, native word-level timestamps, speed, and extensive customization surface through NeMo
+
+**TensorRT Optimization:**
+- Compiled both Conformer encoder (ONNX → TRT FP16, 4 optimization profiles) and LSTM+Joint decoder (single-step TRT engine) to TensorRT
+- Achieved 5.6x end-to-end speedup over NeMo PyTorch (411ms → 261ms avg at 25 concurrent calls per GPU with full fusion)
+- Compiled the autoregressive decoder as a single-step TRT engine called ~300 times per utterance in a Python loop, sidestepping the data-dependent loop limitation
+- Added CUDA event fencing, double-buffered outputs, and encoder pre-projection to eliminate CPU stalls
+- Custom-compiled engine with additional optimizations beyond what NVIDIA's NeMo framework provides out of the box
+
+**Performance Under Load:**
+- Single-GPU performance at 25 concurrent stereo calls (50 individual audio streams):
+  - Median latency dropped by more than half
+  - P99 tail latency nearly halved
+  - 5.4x lower standard deviation — more consistent response times across streams
+- The language model, phrase boosting, and text normalization together account for about a third of total runtime, notable given these are "light" steps relative to the ASR model itself
+
+**VAD & Audio Pipeline:**
+- Implemented per-channel Silero VAD with stereo splitting for independent agent/caller transcription
+- Tuned VAD parameters (900ms silence threshold, 300ms pre-roll, 0.5s min segment) to optimize segment quality for downstream compliance and agent assist consumers
+
+**Build vs. Buy:**
+- Rejected NVIDIA NIM ($1/hr/GPU license) in favor of self-built TRT pipeline behind same gRPC interface
+- Result: ~9x cheaper than the enterprise transcription alternative at equivalent scale (~$850/mo vs ~$8,190/mo for 6,600 agent-hours)
+- Initially planned to default to the enterprise service for real-time due to infrastructure complexity, but promising initial tests led to building it in-house
+- One model, one set of customizations, two serving paths (batch and real-time)
+
+---
+
+### Batch Transcription & Domain Language Model
+
+**Business Impact:** Replaced WhisperX with Parakeet TDT v3 for offline call processing. Achieved parity with the enterprise transcription service on downstream QA task at 275x lower cost. Production transcription time decreased by 73% compared to WhisperX.
+
+**Why WhisperX Was Replaced:**
+- WhisperX's hotword customization severely degraded accuracy — not just on boosted terms but across the board
+- Boosting caused hallucination and single-word repetition even on segments unrelated to the added terms
+- Improving one thing broke many others
+- Hit an accuracy ceiling for domain-specific terminology
+
+**Evaluation & Metrics:**
+- Standard WER treats all errors equally, but "the" vs "a" is fundamentally different from "Medicare" vs "medical care" for compliance scoring
+- This is the classic flaw from Anscombe's Quartet: summary statistics hide the true shape of the data
+- Two models at 10% WER might disagree on completely different words
+- A model that improves from 10% to 8% WER hasn't necessarily kept all old correct transcriptions plus gotten more right — it may have traded accuracy on critical segments for gains elsewhere
+- Built comprehensive ASR comparison framework evaluating:
+  - **WER:** Standard word error rate
+  - **Content WER:** Strips out differences in audio sensitivity (one model transcribing background noise another ignores, or missing quiet speech). Isolates how well each model transcribes audio they both heard, while highlighting common failure modes
+  - **Rare Word WER:** Performance on domain-critical vocabulary
+  - **BERTScore:** Semantic similarity between transcriptions
+  - **Domain Keyword Accuracy:** Accuracy on specific insurance terms
+- Reference standard was an enterprise transcription service with its own customization features enabled to ensure fairness (WER is technically agreement with this model, not manually transcribed ground truths)
+
+**Substitution Analysis:**
+- WhisperX's most common errors were domain-critical deletions: "copay" → "pay," "healthcare" → "care"
+- Parakeet's top mismatches were more benign
+- Text normalization applied to account for surface-level formatting differences (e.g., "health care" normalized to "healthcare")
+- Out of the box, Parakeet was outperformed by WhisperX across all metrics
+- After customization, Parakeet was winning on the metrics that mattered: keyword accuracy, content accuracy on overlapping segments, and semantic similarity, while remaining comparable on overall WER
+
+**AQA Validation:**
+- Ran AQA tool on transcripts from enterprise reference model and customized Parakeet, comparing to historic WhisperX results
+- On one compliance check specifically related to wording: agreement with human evaluators went from 66.7% with WhisperX to 91.7% with customized Parakeet, matching the enterprise model's results exactly
+- Across all checks aggregated: customized Parakeet delivered 6-7% lift in agreement over WhisperX and was within error of the enterprise model
+- Overall: achieved 91% agreement with human QA graders (parity with enterprise at 91%), with branding/title check accuracy at 90% vs. WhisperX's 63%
+
+**Data Curation Pipeline:**
+- Built corpus extraction pipeline from existing VTT files (stripping timestamps, speaker labels, filtering fillers while preserving affirmatives)
+- Combined with manually cleaned domain text and synthetic phrases for insurance vocabulary
+- Designed tiered scaling strategy with QA-mismatch-driven call selection for corpus expansion
+- High-yield samples of problematic calls specifically selected to serve as fine-tuning starting point if needed
+
+**KenLM Domain Language Model:**
+- Trained 6-gram KenLM language model on ~8,900 utterances of curated domain text
+- Integrated via shallow fusion into both NeMo native decoder and custom TRT decode loop
+- Combined with GPU phrase boosting for insurance terms
+- Added WFST inverse text normalization for written-form output
+- Reduced overall WER from 18.3% to 16.2% (11.5% relative improvement)
+
+**Customization Philosophy:**
+- Same principle as LLMs: try lighter-weight customizations before fine-tuning
+- Decode-time approach (language model fusion + phrase boosting) hit performance targets with significantly less development overhead
+- Keeps system decoupled from any specific model version as the field moves quickly
+- Deploying a separate configuration for different product lines (Medicare Advantage vs GA life insurance) is just swapping a corpus and retraining the small language model
+- Fine-tuning would be harder to scale to additional product lines and terminologies
+- Pipeline built to easily extend to fine-tuning if needed, but decode-time approach solved the problem well enough
+
+**What's Next:**
+- Language model corpus intentionally small today — expanding it is most direct path to further accuracy gains
+- Rare word accuracy, particularly prescription drug names, is where enterprise model still has clearest edge
+- Production rollout uses configurable routing to gradually shift traffic while monitoring quality
+- Metrics optimized for will evolve alongside new compliance use cases
+
+---
+
+### Voice AI Agent with Latency Optimization
+
+**Business Impact:** Identified agents spending significant time on routine support (1,000+ voicemails/2 weeks for 66 agents). Built AI voice agent from business case through production deployment. Reduced human-required support requests by 70% and first-word latency by 85% via ONNX/TensorRT optimization of the speech pipeline.
+
+**Technical Architecture:**
+
+**Speech-to-Text (STT):**
+- **Primary Solution: pywhispercpp**
+  - Python bindings for whisper.cpp (C++ implementation of OpenAI Whisper)
+  - Chosen for CPU-only inference capability (no GPU required)
+  - Optimized for edge deployment on agent laptops
+- **Later Experimentation: NVIDIA Parakeet**
+  - Converted Parakeet model to ONNX format
+  - Used TensorRT for GPU-accelerated inference
+  - Provided alternative for higher-performance scenarios
+
+**Text-to-Speech (TTS):**
+- **Kokoro TTS Model**
+  - Lightweight neural TTS model
+  - Best performance-to-resource ratio for use case
+  - Natural-sounding synthesis suitable for customer conversations
+
+**Streaming Architecture (Producer-Consumer Pattern):**
+1. **Text Streaming from LLM:**
+   - LLM (AWS Bedrock) streams response tokens in real-time
+   - Don't wait for complete response before starting TTS
+2. **Balanced Chunk Processing:**
+   - Buffer incoming text into chunks of optimal size
+   - Chunks large enough for natural prosody (TTS needs context)
+   - Chunks small enough to minimize latency
+3. **Concurrent Processing:**
+   - While TTS synthesizes and plays current chunk, next chunk is being prepared
+   - Pipeline parallelism: generation → synthesis → playback happen simultaneously
+   - Seamless audio output without gaps
+
+**Model Optimization:**
+- **ONNX Conversion:** PyTorch → ONNX format for both Whisper and TTS models
+- **Quantization:** INT8 quantization for reduced memory and faster inference
+- **TensorRT Optimization:** ONNX → TensorRT engines with layer fusion and kernel optimization
+
+**Deployment:**
+- Edge deployment on standard business laptops (sub-4GB memory footprint)
+- No powerful hardware required
+- Performs well despite limited resources
+
+---
+
 ### Production Payment Prediction System
 
 **Business Impact:** Improved successful payment rates from 47% to 59% (25% relative improvement)
@@ -52,66 +210,9 @@ This document contains in-depth technical details about projects, implementation
 
 ---
 
-### Real-Time Voice AI Platform
-
-**Business Impact:** Reduced first-word response latency by 85% (from 5-7 seconds to sub-second)
-
-**Technical Architecture:**
-
-**Speech-to-Text (STT):**
-- **Primary Solution: pywhispercpp**
-  - Python bindings for whisper.cpp (C++ implementation of OpenAI Whisper)
-  - Chosen for CPU-only inference capability (no GPU required)
-  - Optimized for edge deployment on agent laptops
-- **Later Experimentation: NVIDIA Parakeet**
-  - Converted Parakeet model to ONNX format
-  - Used TensorRT for GPU-accelerated inference
-  - Provided alternative for higher-performance scenarios
-
-**Text-to-Speech (TTS):**
-- **Kokoro TTS Model**
-  - Lightweight neural TTS model
-  - Best performance-to-resource ratio for use case
-  - Natural-sounding synthesis suitable for customer conversations
-
-**Streaming Architecture (Producer-Consumer Pattern):**
-1. **Text Streaming from LLM:**
-   - LLM (AWS Bedrock) streams response tokens in real-time
-   - Don't wait for complete response before starting TTS
-2. **Balanced Chunk Processing:**
-   - Buffer incoming text into chunks of optimal size
-   - Chunks large enough for natural prosody (TTS needs context)
-   - Chunks small enough to minimize latency
-3. **Concurrent Processing:**
-   - While TTS synthesizes and plays current chunk, next chunk is being prepared
-   - Pipeline parallelism: generation → synthesis → playback happen simultaneously
-   - Seamless audio output without gaps
-
-**Model Optimization:**
-- **ONNX Conversion:**
-  - Used ONNX Python library for model export
-  - Standard conversion from PyTorch → ONNX format
-- **Quantization:**
-  - INT8 quantization for reduced memory and faster inference
-  - Applied to both Whisper and TTS models
-  - ONNX runtime handles quantization natively
-- **TensorRT Optimization:**
-  - Converted ONNX models to TensorRT engines (for GPU path)
-  - Layer fusion and kernel optimization
-  - Further latency reduction
-
-**Deployment:**
-- **Edge Deployment:** Runs locally on sales agents' laptops
-  - No powerful hardware - standard business laptops
-  - Performs well despite limited resources
-  - Sub-4GB memory footprint critical for this constraint
-- **Future Considerations:** Potential cloud migration if more capability needed
-
----
-
 ### Automated Quality Assurance at Scale
 
-**Business Impact:** Processing 99% of call transcripts during peak season with automated compliance monitoring
+**Business Impact:** Designed serverless LLM-based compliance system (AWS Lambda) achieving 99% call coverage, navigating model cost/accuracy tradeoffs with structured YAML output for token efficiency. Built layered error taxonomy and confidence prediction model.
 
 **Technical Stack:**
 
@@ -126,6 +227,9 @@ This document contains in-depth technical details about projects, implementation
   - Budget-conscious choice (~$0.05 per transcript for full checklist)
   - Claude or GPT-4 would be better but significantly more expensive
   - Trade-off: cost vs accuracy
+- **Structured Output:** YAML format for token efficiency over JSON
+- **Layered Error Taxonomy:** Hierarchical classification of compliance violations
+- **Confidence Prediction Model:** Calibrated confidence scores for each compliance check
 - **Prompt Engineering Challenges:**
   - Translating human-designed rubrics into LLM instructions
   - Few-shot examples of expected behavior
@@ -154,11 +258,12 @@ This document contains in-depth technical details about projects, implementation
 
 ### Multi-Objective Optimization System
 
-**Business Impact:** 3-5% improvement in top 3 ranked sold plans, 11x training time reduction
+**Business Impact:** Replaced intractable discrete search (10¹⁹ parameter space) with differentiable optimization using Plackett-Luce ranking model and PPO-style trust regions, achieving 3-5% top-3 plan sales improvement with 11x training speedup.
 
 **Problem Statement:**
 - Ranking Medicare Advantage plans for consumers based on needs and preferences
 - Multiple competing objectives that aren't easily combined into single metric
+- Original discrete search space of 10¹⁹ configurations was intractable
 
 **Competing Objectives:**
 1. **Reciprocal Rank (RR):** Whether plan was actually chosen/sold by agent
@@ -232,6 +337,11 @@ Components:
 - **β:** Regularization strength (don't stray too far from starting point w₀)
 - **w₀:** Initial weights from current best empirical solution
 
+**PPO-Style Trust Regions:**
+- Regularization term β·||w - w₀||² acts as a trust region, similar to PPO's clipping mechanism
+- Prevents catastrophic policy updates — new rankings stay close to validated solutions
+- Enables safe incremental improvement over production baseline
+
 **Why This Works:**
 - Converts hard discrete rankings into soft probabilistic rankings
 - Smooth, differentiable objective enables gradient-based optimization
@@ -240,57 +350,64 @@ Components:
 
 ---
 
-### Enhanced RAG Infrastructure
+### RAG Infrastructure for Insurance Plan Documentation
 
-**Performance Metrics:** Sub-second response time (p95 < 800ms), 0.91 MRR@10
+**Performance Metrics (v1):** Sub-second response time (p95 < 800ms), 0.91 MRR@10
+**Performance Metrics (v2 — Agentic Rewrite):** 2x+ improvement across groundedness, accuracy, relevance, and harder multi-hop questions
 
-**Architecture:**
+#### V1: Traditional RAG Pipeline
 
-**1. Document Processing & Chunking:**
-- **Challenge:** Insurance plan documents with complex structure
-  - Can't chunk by pages (sections span multiple pages)
-  - Need semantically coherent chunks
-- **Solution: Contextual Chunking Based on Document Structure**
-  - Parse headers and document hierarchy
-  - Keep related content together (e.g., all benefits in a section)
-  - Preserve context within chunks
-  - This was the hardest part - more challenging than embedding quality
+**Document Processing:**
+- Used pdfplumber to extract text from insurance PDFs (Evidence of Coverage / EOC documents)
+- Extraction was often messy — complex nested tables, multi-page sections, formatting artifacts
+- Chunked extracted text and embedded with Amazon Titan Text Embeddings
+- Stored in Redis Vector Database for similarity search
 
-**2. Embeddings:**
-- **Model: Amazon Titan Text Embeddings**
-  - Easiest to integrate with AWS infrastructure
-  - Performance adequate for use case
-  - Embedding quality wasn't the bottleneck (chunking was)
+**Retrieval:**
+- Hybrid BM25 + dense embedding search (LangChain's BM25Retriever)
+- Cross-encoder reranking: broad recall (~100 candidates) → precision reranking to top 10
+- Returned top 3 relevant chunks to LLM for answer generation
 
-**3. Vector Storage:**
-- **Redis Vector Database**
-  - Fast similarity search
-  - Low latency critical for p95 < 800ms target
-  - Integration with existing Redis infrastructure
+**Limitations of V1:**
+- Top-k chunk retrieval fundamentally limited for interconnected insurance documents
+- EOC documents have deeply cross-referenced eligibility logic: "you qualify for X if Y, and Y is true if you have Z conditions"
+- Retrieving 3 isolated chunks often missed these dependency chains
+- pdfplumber struggled with nested tables and complex PDF layouts, introducing extraction errors before retrieval even began
 
-**4. Hybrid Search:**
-- **BM25 Integration:**
-  - Used LangChain's BM25Retriever class
-  - Combines dense (embedding) + sparse (keyword) retrieval
-  - Handles both semantic similarity and exact term matching
-- **Score Fusion:**
-  - Likely reciprocal rank fusion or linear combination
-  - Balances neural and lexical retrieval
+#### V2: Agentic RAG with OCR-to-Markdown Pipeline
 
-**5. Reranking:**
-- Cross-encoder model for reranking top-k results
-- Two-stage retrieval pipeline:
-  - Broad recall: retrieve ~100 candidates
-  - Precision reranking: rerank to top 10
-- Improved MRR@10 to 0.91
+**OCR Model & Document Parsing:**
+- Replaced pdfplumber with a vision-language OCR model from **LightOn**
+- Contributed directly to the model's training direction: provided extensive examples of failure modes from current OCR models on insurance PDFs, EOCs, and documents with nested tables
+- Result: a model that accurately handles nested tables, multi-page table splits, and complex insurance document formatting
+- Output: clean markdown representations of entire documents, preserving structure and cross-references
+- No more vector store needed — documents are now markdown text that the agent can read directly
 
-**6. Query Pipeline:**
-- Total latency p95 < 800ms breakdown (estimated):
-  - Retrieval: ~200-300ms
-  - Reranking: ~200-300ms
-  - LLM generation: ~200-300ms
-- Caching layer for frequent queries (Redis)
-- Async operations for parallel processing
+**OCR Optimization Pipeline:**
+- Wrote optimization pipeline to run the OCR model efficiently on both MLX (Apple Silicon) and A100 GPUs
+- **MLX optimization:**
+  - Original: ~2 hours for a ~200-page PDF
+  - Optimized with 4-bit quantization, reduced scale, parallel workers: **~7 minutes** with no practical quality loss
+  - Attempted batched vision embedding support (not very effective) and hit MLX limitations (no paged attention)
+  - Quality impact of 4-bit quant was limited to cosmetic issues (bolding, heading levels, table of contents formatting) — actual content accuracy on eval questions was unchanged
+- **A100 optimization:** ~45 seconds for ~200-page documents at full precision
+- **MLX 4-bit vs A100 full precision comparison (214 pages):**
+  - Character similarity: 94.05%
+  - Word similarity: 97.1%
+  - Line similarity: 76.8%
+  - MLX 4-bit was actually ~1-2 minutes faster than full precision + full scale on A100
+- Post-processing step connects tables that were split across multiple pages at lookup time
+
+**Agentic RAG Architecture:**
+- Custom lightweight agent loop (no framework overhead like LangGraph)
+- Instead of retrieving top-k chunks, the agent intelligently searches through the markdown documents
+- Agent follows cross-references and conditional logic chains in EOC documents (e.g., eligibility criteria that depend on other sections)
+- Produces more thorough, grounded responses by traversing the interconnected structure of the documentation
+
+**Results:**
+- 2x+ improvement over V1 across all evaluation metrics: groundedness, accuracy, relevance, performance on harder multi-hop questions, and response thoroughness
+- Trade-off: slower than V1 (agent reasoning takes more time), but latency is still manageable for real-time audio and voice agent integration
+- Being integrated into the IVA (Interactive Voice Agent) to expand its capability for customer service interactions — same voice agent platform, now with access to accurate plan documentation
 
 ---
 
@@ -392,12 +509,95 @@ Components:
 
 ---
 
+## Independent Research & Personal Projects
+
+### Multi-Modal Auto-Dubbing Pipeline — Personal Project
+
+**Overview:** End-to-end pipeline translating foreign-language video to dubbed English with voice cloning and synchronized audio replacement.
+
+**Multi-Model Pipeline:**
+- **Mel-RoFormer:** Vocal/background source separation — isolates speech from background audio
+- **Microsoft VibeVoice:** Joint transcription + diarization of the separated vocal track
+- **TranslateGemma 12B:** Translation of transcribed text from source language to English
+- **Qwen3-TTS:** Voice cloning from reference clips — synthesizes English speech in the original speaker's voice
+- **Timing Synchronization:** Handles alignment of dubbed audio with original video pacing to maintain lip-sync plausibility
+
+**Technical Challenges:**
+- Chaining multiple models with different input/output formats
+- Managing audio quality through the separation → transcription → synthesis pipeline
+- Synchronizing dubbed audio timing with original video without visual artifacts
+- Voice cloning quality depends heavily on reference clip selection and length
+
+---
+
+### Unified Dual-Stream Speech Encoder — Independent Research (WIP)
+
+**Overview:** Novel architecture jointly capturing semantics and prosody from a single FastConformer backbone for emotion-conditioned speech retrieval. Sub-1B parameters targeting edge deployment.
+
+**Architecture Design:**
+- Dual-stream split at ~70% encoder depth:
+  - **Content stream (H_c):** ASR-grade transcription capability
+  - **Prosody stream (H_p):** Emotion/paralinguistic features
+- **ColBERT-style multi-vector retrieval head** enabling queries like "find angry customer calls about refunds"
+- Single backbone avoids the cost of running separate ASR and emotion models
+
+**Phased Training & Distillation:**
+- Validated three hypotheses empirically before committing to architecture:
+  1. **Frozen probe emotion encoding:** 61-66% unweighted accuracy (UA) from frozen encoder features — enough signal exists
+  2. **Depth-wise signal separation:** Content and prosody information concentrate at different encoder depths
+  3. **Untrained MaxSim retrievability:** ColBERT-style retrieval works even before fine-tuning the retrieval head
+- **Distillation sources:**
+  - **Qwen3-Omni** for semantic targets
+  - **emotion2vec** for prosody targets
+- **Current Results:**
+  - SER (Speech Emotion Recognition) UA: 72.0% on IEMOCAP, well above 55% target
+  - No ASR degradation from the dual-stream split
+
+---
+
+### BM-ALS: Data-Driven Tensor Decomposition
+
+**Overview:** Novel tensor decomposition algorithm: BM-ALS (Bhattacharya-Mesner Alternating Least Squares) operating in Bhattacharya-Mesner Hypermatrix Algebra Space.
+
+**Key Results:**
+- JAX implementation for GPU-accelerated tensor operations
+- Outperforms Tucker and CP decomposition by 2-30x across:
+  - Synthetic benchmark tensors
+  - Physics tensors (MuJoCo simulation data)
+  - GPT-2 attention composition tensors
+- Paper under review
+
+**Technical Approach:**
+- Leverages hypermatrix algebra structure for more expressive decompositions
+- Data-driven: learns decomposition structure from the tensor itself rather than imposing fixed rank/structure
+- ALS (Alternating Least Squares) optimization with convergence guarantees
+
+---
+
+### CoT Activation Scaffolding
+
+**Overview:** Developed theory and ran behavioral experiments showing chain-of-thought tokens function as activation scaffolding rather than faithful reasoning traces.
+
+**Key Findings:**
+- Chain-of-thought (CoT) tokens serve as intermediate computational scaffolding
+- The tokens provide activation space for the model to perform multi-step computation, but do not necessarily represent the model's "true" reasoning process
+- Mechanistic validation planned via Gemma Scope transcoders to trace how CoT tokens influence internal representations
+
+**Implications:**
+- Challenges the common assumption that CoT outputs are faithful explanations of model reasoning
+- Suggests CoT is more about providing computational workspace than transparent reasoning
+- Has implications for interpretability and alignment research
+
+---
+
 ## Johns Hopkins Wilmer Eye Institute | Machine Learning Researcher
 *May 2021 - Present | Baltimore, MD*
 
+12 publications in top ophthalmology journals. ICML 2023 workshop presentation. Fine-tuned BERT, Llama, and Qwen with LoRA/PEFT for clinical entity extraction (0.96 AUC). Fine-tuned SAM foundation model for automated retinal segmentation (Dice 0.88).
+
 ### Novel Transformer Architecture for Glaucoma Progression
 
-**Research Impact:** 0.74 → 0.97 AUC for predicting rapid glaucoma worsening
+**Research Impact:** 0.74 → 0.97 AUC for predicting rapid glaucoma worsening. 12 publications, ICML 2023 workshop presentation.
 
 **Problem Statement:**
 - Predict future rapid glaucoma progression using multimodal clinical data
@@ -686,14 +886,43 @@ Components:
 
 ## Additional Technical Context
 
+### Speech & Audio:
+- **ASR:** Parakeet TDT v3, Whisper/WhisperX, AWS Transcribe, faster-whisper
+- **TTS:** Qwen3-TTS, Kokoro TTS, ONNX-optimized speech synthesis
+- **VAD:** Silero VAD with stereo splitting
+- **Diarization:** Microsoft VibeVoice
+- **Source Separation:** Mel-RoFormer
+- **Language Models:** KenLM n-gram LMs, phrase boosting, shallow fusion
+- **Frameworks:** NVIDIA NeMo toolkit
+- **Evaluation:** Custom WER variants (content WER, rare word WER), BERTScore, domain keyword accuracy
+
+### Model Optimization & Serving:
+- **TensorRT:** ONNX export, FP16 engine compilation, multi-profile optimization, single-step decoder engines
+- **ONNX Runtime:** Model conversion, INT8 quantization
+- **Serving:** PyTriton, Triton Inference Server, dynamic batching, async gRPC
+- **AWS:** SageMaker Inference Components, EC2 GPU instances
+- **Techniques:** CUDA event fencing, double-buffered outputs, encoder pre-projection
+
+### Core ML & Training:
+- **PyTorch:** Custom architectures, distributed training with FSDP
+- **JAX:** Tensor decomposition research (BM-ALS)
+- **TensorFlow:** Legacy experience
+- **Fine-tuning:** LoRA/PEFT, GRPO/PPO alignment
+- **Attention:** FlashAttention, efficient attention mechanisms
+- **Languages:** Python (expert), C++ (optimization)
+
 ### Programming Languages & Tools:
 - **Python:** Expert level - primary language for all ML work
+- **C++:** Optimization and performance-critical code
 - **SQL:** Advanced - data analysis, feature engineering
-- **AWS:** SageMaker, Lambda, Bedrock, S3
+
+### Infrastructure:
+- **AWS:** SageMaker, Lambda, Bedrock, S3, EC2
 - **Azure:** ML endpoints, HIPAA-compliant deployment
 - **Databricks:** Feature stores, distributed processing
-- **PyTorch:** Primary deep learning framework
-- **MLflow:** Model versioning and deployment
+- **Docker:** Containerization
+- **GCP:** Cloud services
+- **Data Pipelines:** Spark/PySpark, Pandas, Polars
 
 ### Deep Learning Expertise:
 - Custom transformer architectures
@@ -701,24 +930,29 @@ Components:
 - Temporal modeling (irregular time series, Neural ODEs)
 - FlashAttention and efficient attention mechanisms
 - LoRA/PEFT fine-tuning
-- Model optimization (quantization, ONNX, TensorRT)
+- Dual-stream encoder architectures
+- ColBERT-style multi-vector retrieval
+- Knowledge distillation
 
 ### Optimization:
 - MILP with Gurobi
 - Evolutionary algorithms (NSGA-II/III, pymoo)
 - Differentiable ranking (Plackett-Luce, ListNet)
+- PPO-style trust regions
 - Multi-objective optimization
 
 ### Production ML:
 - A/B testing and experimentation
 - Model monitoring and drift detection
-- Real-time inference pipelines
+- Real-time inference pipelines (streaming transcription, voice AI)
 - Edge deployment and optimization
 - MLOps and deployment best practices
+- Build vs. buy analysis (cost modeling, infrastructure decisions)
 
 ### Domain Expertise:
+- Speech & Audio AI (ASR, TTS, VAD, diarization, source separation)
 - Healthcare AI (clinical decision support, medical imaging)
-- Insurance/Medicare (plan recommendation, compliance)
+- Insurance/Medicare (plan recommendation, compliance, transcription)
 - Quantitative finance (return forecasting, portfolio optimization)
 - Production systems at scale
 

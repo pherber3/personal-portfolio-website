@@ -25,11 +25,11 @@ export default function TimelineItem({ experience, isLast }: TimelineItemProps) 
 
         {/* Vertical Line (Connector) */}
         {!isLast && (
-          <div className="hidden md:block absolute left-[139px] top-[28px] bottom-[-48px] w-[1px] bg-[#E5E2D9]"></div>
+          <div className="hidden md:block absolute left-[139px] top-[14px] bottom-[-62px] w-[1px] bg-[#E5E2D9]"></div>
         )}
-        
+
         {/* Dot */}
-        <div className="hidden md:block absolute left-[136px] top-[6px] w-[7px] h-[7px] rounded-full bg-[#1A1A1A] ring-4 ring-[#FDFCFB]"></div>
+        <div className="hidden md:block absolute left-[135px] top-[10px] w-[9px] h-[9px] rounded-full bg-[#1A1A1A] z-10"></div>
 
         {/* Right Column: Content */}
         <div className="relative">
@@ -65,13 +65,23 @@ export default function TimelineItem({ experience, isLast }: TimelineItemProps) 
               }`}
             >
               <div className="overflow-hidden">
-                <div className="pl-4 border-l-2 border-[#3A4D39]/20 space-y-3 bg-[#F4F2ED]/50 p-4 rounded-r-lg">
-                  {experience.details.map((detail, idx) => (
-                    <div key={idx} className="text-sm text-[#4A4A4A] leading-relaxed">
-                      {detail.replace(/\*\*/g, '')} {/* Stripping MD bolding for cleaner look */}
-                    </div>
-                  ))}
-                </div>
+                <ul className="pl-4 border-l-2 border-[#3A4D39]/20 bg-[#F4F2ED]/50 p-4 rounded-r-lg space-y-3 list-disc pl-9 marker:text-[#738F70]">
+                  {experience.details.map((detail, idx) => {
+                    const match = detail.match(/^\*\*(.+?):?\*\*:?\s*([\s\S]*)/);
+                    return (
+                      <li key={idx} className="text-sm text-[#4A4A4A] leading-relaxed">
+                        {match ? (
+                          <>
+                            <span className="font-semibold text-[#1A1A1A]">{match[1]}:</span>{' '}
+                            {match[2]}
+                          </>
+                        ) : (
+                          detail.replace(/\*\*/g, '')
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             </div>
         </div>

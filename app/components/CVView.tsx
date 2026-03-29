@@ -100,8 +100,8 @@ export default function CVView() {
                     <div className="space-y-3">
                       {exp.details.map((detail, idx) => (
                         <div key={idx} className="flex gap-3 text-sm leading-relaxed text-[#4A4A4A]">
-                          <span className="text-[#E5E2D9] select-none">→</span>
-                          <div className="prose prose-sm max-w-none prose-strong:font-medium prose-strong:text-[#1A1A1A]">
+                          <span className="text-[#738F70] select-none mt-1.5 text-[6px]">●</span>
+                          <div className="prose prose-sm max-w-none prose-strong:font-semibold prose-strong:text-[#1A1A1A]">
                             <ReactMarkdown>{detail}</ReactMarkdown>
                           </div>
                         </div>

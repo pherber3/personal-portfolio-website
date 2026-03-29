@@ -19,10 +19,10 @@ export default function ChatBot() {
 
   // Suggested questions
   const exampleQuestions = [
-    "How did Neural ODEs handle irregular clinical data?",
-    "Why did Logistic Regression beat Deep Learning for payments?",
-    "What was the architecture of the sub-second Voice AI platform?",
-    "Explain the Plackett-Luce differentiable ranking model."
+    "How did you optimize Parakeet TDT with TensorRT for real-time transcription?",
+    "What made the agentic RAG approach outperform traditional chunk-based retrieval?",
+    "Explain the Plackett-Luce differentiable ranking model.",
+    "What is the dual-stream speech encoder architecture?"
   ];
 
   useEffect(() => {
@@ -124,16 +124,7 @@ export default function ChatBot() {
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#FDFCFB]">
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-3 text-sm leading-relaxed rounded-lg ${
-                  m.role === 'user' 
-                    // Updated User Bubble to match the Green Theme (was black)
-                    ? 'bg-[#3A4D39] text-white' 
-                    : 'bg-[#F4F2ED] text-[#1A1A1A] border border-[#E5E2D9]'
-                }`}>
-                  {m.content}
-                </div>
-              </div>
+              <ChatMessage key={i} role={m.role} content={m.content} />
             ))}
             
             {showExamples && !isLoading && (
