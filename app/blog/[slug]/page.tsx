@@ -112,6 +112,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 remarkPlugins: [remarkGfm, remarkMath],
                 rehypePlugins: [rehypeSlug, rehypeKatex],
               },
+              blockJS: false,
             }}
             components={mdxComponents}
           />
