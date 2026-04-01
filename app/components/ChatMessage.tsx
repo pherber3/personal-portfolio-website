@@ -14,7 +14,7 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
-        className="max-w-[80%] rounded-2xl px-4 py-3"
+        className="max-w-[80%] rounded-2xl px-4 py-3 overflow-hidden"
         style={
           isUser
             ? { background: '#3A4D39', color: '#FFFFFF' }
@@ -24,7 +24,7 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
         {isUser ? (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
         ) : (
-          <div className="prose prose-sm max-w-none prose-p:text-[#2B2B2B] prose-strong:text-[#2B2B2B] prose-strong:font-semibold prose-a:text-[#8B9A7E] prose-a:underline prose-li:text-[#2B2B2B] prose-ul:text-[#2B2B2B] prose-ol:text-[#2B2B2B]" style={{ color: '#2B2B2B' }}>
+          <div className="prose prose-sm max-w-none break-words overflow-x-auto prose-p:text-[#2B2B2B] prose-strong:text-[#2B2B2B] prose-strong:font-semibold prose-a:text-[#8B9A7E] prose-a:underline prose-li:text-[#2B2B2B] prose-ul:text-[#2B2B2B] prose-ol:text-[#2B2B2B]" style={{ color: '#2B2B2B' }}>
             <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
               {content}
             </ReactMarkdown>

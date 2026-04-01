@@ -117,7 +117,7 @@ export default function ChatBot() {
       </div>
 
       {isOpen && (
-        <div className="fixed bottom-20 right-6 w-[90vw] md:w-[400px] h-[550px] bg-white rounded-xl shadow-2xl border border-[#E5E2D9] flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200">
+        <div className="fixed inset-4 bottom-20 md:inset-auto md:bottom-20 md:right-6 md:w-[400px] md:h-[550px] bg-white rounded-xl shadow-2xl border border-[#E5E2D9] flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200">
           <div className="bg-[#F4F2ED] p-3 border-b border-[#E5E2D9] text-xs font-mono text-[#787570] text-center uppercase tracking-wide">
             RAG Deep Dive Assistant
           </div>

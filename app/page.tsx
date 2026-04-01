@@ -74,7 +74,7 @@ export default function Home() {
 
                   <div className="prose prose-lg text-[#4A4A4A] max-w-2xl leading-relaxed">
                     <p>
-                      Specializing in performance-optimized ML systems and novel architecture research, from custom TensorRT inference to training multimodal transformers and creating tensor decomposition algorithms. Combining published research and healthcare AI experience with hands-on production engineering across speech model pipelines, agentic retrieval, and traditional ML.
+                      Specializing in performance-optimized ML systems and novel architecture research, from custom TensorRT inference to training multimodal transformers and creating tensor decomposition algorithms. Combining published research and AI experience with hands-on production engineering across speech model pipelines, agentic systems, and traditional ML.
                     </p>
                   </div>
                 </div>
