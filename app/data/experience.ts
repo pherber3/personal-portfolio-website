@@ -40,7 +40,7 @@ export const experiences: Experience[] = [
   {
     company: "Johns Hopkins Wilmer Eye Institute",
     role: "Machine Learning Researcher",
-    dates: "May 2021 - Present",
+    dates: "May 2021 - March 2026",
     location: "Baltimore, MD",
     summary: "Built custom multimodal transformer from scratch in PyTorch for glaucoma progression prediction, evolving from 0.74 to 0.97 AUC. 12 publications in top ophthalmology journals, ICML 2023 workshop presentation. Fine-tuned BERT, Llama, and Qwen with LoRA/PEFT for clinical entity extraction. Fine-tuned SAM foundation model for automated retinal segmentation.",
     details: [

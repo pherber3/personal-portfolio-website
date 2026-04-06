@@ -591,7 +591,7 @@ Components:
 ---
 
 ## Johns Hopkins Wilmer Eye Institute | Machine Learning Researcher
-*May 2021 - Present | Baltimore, MD*
+*May 2021 - March 2026 | Baltimore, MD*
 
 12 publications in top ophthalmology journals. ICML 2023 workshop presentation. Fine-tuned BERT, Llama, and Qwen with LoRA/PEFT for clinical entity extraction (0.96 AUC). Fine-tuned SAM foundation model for automated retinal segmentation (Dice 0.88).
 
