@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" font-family="ui-sans-serif, system-ui, sans-serif" fill="#1A1A1A">
+  <!--
+    Regime scatter: centroid adequacy across six text corpora.
+    x: d_eff,local (log scale, 1 .. 200)
+    y: d-bar (linear, 0 .. 0.6)
+    dot area: centroid identity-retrieval accuracy
+    Plot area: x in [80, 740], y in [70, 420]
+    Source: Vangara & Gopinath (2026), Table reproduced in post.
+  -->
+
+  <rect width="800" height="500" fill="#FDFCFB"/>
+
+  <!-- Tight-regime shaded box: d_eff < 15 AND d-bar < 0.2 (theta' = 0.2).
+       x at d_eff=15: 80 + (log10(15)/log10(200)) * 660 = 80 + 0.5114 * 660 = 417.5
+       y at d-bar=0.2: 420 - (0.2/0.6)*350 = 420 - 116.67 = 303.33  -->
+  <rect x="80" y="303.33" width="337.5" height="116.67" fill="#3A4D39" fill-opacity="0.06"/>
+  <text x="92" y="320" font-size="11" font-style="italic" fill="#3A4D39" fill-opacity="0.85">tight regime — centroid sufficient</text>
+
+  <!-- Theta' = 0.2 reference line (horizontal) -->
+  <line x1="80" y1="303.33" x2="740" y2="303.33" stroke="#787570" stroke-width="1" stroke-dasharray="3,3" stroke-opacity="0.5"/>
+  <text x="744" y="307" font-size="11" fill="#787570">θ′ = 0.2</text>
+
+  <!-- Range frame: only axes, drawn to data extent. -->
+  <!-- x-axis: from x=80 (d_eff=1) to x=740 (d_eff=200) at y=420 -->
+  <line x1="80" y1="420" x2="740" y2="420" stroke="#1A1A1A" stroke-width="1"/>
+  <!-- y-axis: from y=420 (d-bar=0) to y=70 (d-bar=0.6) at x=80 -->
+  <line x1="80" y1="70" x2="80" y2="420" stroke="#1A1A1A" stroke-width="1"/>
+
+  <!-- x ticks (log scale): 1, 2, 5, 10, 20, 50, 100, 200
+       x = 80 + (log10(v)/log10(200)) * 660 -->
+  <!-- log10(2)=0.3010 -> 179.2 ; log10(5)=0.6990 -> 359.2 ; log10(10)=1 -> 510 ; log10(20)=1.3010 -> 569.2; log10(50)=1.6990 -> 671.2; log10(100)=2 -> 686.0 ... recompute -->
+  <!-- Recompute: 80 + (log10(v)/log10(200))*660, log10(200)=2.3010
+       v=1   : 80 + 0     = 80
+       v=2   : 80 + (0.3010/2.3010)*660 = 80 + 86.36 = 166.36
+       v=5   : 80 + (0.6990/2.3010)*660 = 80 + 200.5 = 280.5
+       v=10  : 80 + (1.0000/2.3010)*660 = 80 + 286.83 = 366.83
+       v=20  : 80 + (1.3010/2.3010)*660 = 80 + 373.20 = 453.20
+       v=50  : 80 + (1.6990/2.3010)*660 = 80 + 487.34 = 567.34
+       v=100 : 80 + (2.0000/2.3010)*660 = 80 + 573.66 = 653.66
+       v=200 : 80 + 660 = 740 -->
+  <g font-size="11" fill="#1A1A1A">
+    <g stroke="#1A1A1A" stroke-width="1">
+      <line x1="80"     y1="420" x2="80"     y2="425"/>
+      <line x1="166.36" y1="420" x2="166.36" y2="425"/>
+      <line x1="280.5"  y1="420" x2="280.5"  y2="425"/>
+      <line x1="366.83" y1="420" x2="366.83" y2="425"/>
+      <line x1="453.20" y1="420" x2="453.20" y2="425"/>
+      <line x1="567.34" y1="420" x2="567.34" y2="425"/>
+      <line x1="653.66" y1="420" x2="653.66" y2="425"/>
+      <line x1="740"    y1="420" x2="740"    y2="425"/>
+    </g>
+    <text x="80"     y="440" text-anchor="middle">1</text>
+    <text x="166.36" y="440" text-anchor="middle">2</text>
+    <text x="280.5"  y="440" text-anchor="middle">5</text>
+    <text x="366.83" y="440" text-anchor="middle">10</text>
+    <text x="453.20" y="440" text-anchor="middle">20</text>
+    <text x="567.34" y="440" text-anchor="middle">50</text>
+    <text x="653.66" y="440" text-anchor="middle">100</text>
+    <text x="740"    y="440" text-anchor="middle">200</text>
+  </g>
+
+  <!-- y ticks (linear): 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6
+       y = 420 - (v/0.6)*350  -> spacing 58.33 per 0.1 -->
+  <g font-size="11" fill="#1A1A1A">
+    <g stroke="#1A1A1A" stroke-width="1">
+      <line x1="80" y1="420"    x2="75" y2="420"/>
+      <line x1="80" y1="361.67" x2="75" y2="361.67"/>
+      <line x1="80" y1="303.33" x2="75" y2="303.33"/>
+      <line x1="80" y1="245"    x2="75" y2="245"/>
+      <line x1="80" y1="186.67" x2="75" y2="186.67"/>
+      <line x1="80" y1="128.33" x2="75" y2="128.33"/>
+      <line x1="80" y1="70"     x2="75" y2="70"/>
+    </g>
+    <text x="70" y="424" text-anchor="end">0.0</text>
+    <text x="70" y="365.67" text-anchor="end">0.1</text>
+    <text x="70" y="307.33" text-anchor="end">0.2</text>
+    <text x="70" y="249" text-anchor="end">0.3</text>
+    <text x="70" y="190.67" text-anchor="end">0.4</text>
+    <text x="70" y="132.33" text-anchor="end">0.5</text>
+    <text x="70" y="74" text-anchor="end">0.6</text>
+  </g>
+
+  <!-- Axis labels -->
+  <text x="410" y="475" text-anchor="middle" font-size="13">local effective dimension  d&#x2091;&#x1d3b;&#x1d3b;  (log scale)</text>
+  <text x="28" y="245" text-anchor="middle" font-size="13" transform="rotate(-90 28 245)">average intra-cluster distance  d&#772;</text>
+
+  <!-- Data points.
+       Dot radius scales with centroid id accuracy (accuracy 0.4 -> r=6, 1.0 -> r=18, linear)
+       r = 6 + (acc - 0.4) / 0.6 * 12
+
+       Corpora:
+       DRM templated   : d_eff=2.3,   d-bar=0.05, acc=0.942
+       HotpotQA        : d_eff=1.5,   d-bar=0.48, acc=0.487
+       MS MARCO        : d_eff=5.5,   d-bar=0.33, acc=0.905
+       NQ              : d_eff=12.6,  d-bar=0.38, acc=0.761
+       Wikipedia secs  : d_eff=30.1,  d-bar=0.51, acc=0.647
+       arXiv titles    : d_eff=107.5, d-bar=0.33, acc=0.754
+
+       x = 80 + (log10(d_eff)/2.3010)*660
+       y = 420 - (d_bar/0.6)*350
+
+       DRM: log10(2.3)=0.3617 -> x = 80 + 0.1572*660 = 183.78 ; y=420 - 0.0833*350 = 420 - 29.17 = 390.83 ; r = 6 + 0.542/0.6*12 = 6 + 10.84 = 16.84
+       Hotpot: log10(1.5)=0.1761 -> x = 80 + 0.0765*660 = 130.51 ; y=420 - 0.8*350 = 420 - 280 = 140 ; r = 6 + 0.087/0.6*12 = 6 + 1.74 = 7.74
+       MARCO: log10(5.5)=0.7404 -> x = 80 + 0.3218*660 = 292.36 ; y=420 - 0.55*350 = 420 - 192.5 = 227.5 ; r = 6 + 0.505/0.6*12 = 6 + 10.10 = 16.10
+       NQ: log10(12.6)=1.1004 -> x = 80 + 0.4782*660 = 395.65 ; y=420 - 0.6333*350 = 420 - 221.67 = 198.33 ; r = 6 + 0.361/0.6*12 = 6 + 7.22 = 13.22
+       Wiki: log10(30.1)=1.4786 -> x = 80 + 0.6426*660 = 504.13 ; y=420 - 0.85*350 = 420 - 297.5 = 122.5 ; r = 6 + 0.247/0.6*12 = 6 + 4.94 = 10.94
+       arXiv: log10(107.5)=2.0314 -> x = 80 + 0.8829*660 = 662.69 ; y=420 - 0.55*350 = 420 - 192.5 = 227.5 ; r = 6 + 0.354/0.6*12 = 6 + 7.08 = 13.08
+  -->
+
+  <g>
+    <!-- DRM templated -->
+    <circle cx="183.78" cy="390.83" r="16.84" fill="#3A4D39" fill-opacity="0.78" stroke="#3A4D39" stroke-width="1"/>
+    <text x="207" y="394" font-size="12" fill="#1A1A1A">DRM templated</text>
+    <text x="207" y="408" font-size="10" fill="#787570">acc 0.942</text>
+
+    <!-- HotpotQA -->
+    <circle cx="130.51" cy="140" r="7.74" fill="#9B4D4D" fill-opacity="0.78" stroke="#9B4D4D" stroke-width="1"/>
+    <text x="142" y="138" font-size="12" fill="#1A1A1A">HotpotQA</text>
+    <text x="142" y="152" font-size="10" fill="#787570">acc 0.487</text>
+
+    <!-- MS MARCO -->
+    <circle cx="292.36" cy="227.5" r="16.10" fill="#3A4D39" fill-opacity="0.78" stroke="#3A4D39" stroke-width="1"/>
+    <text x="315" y="225" font-size="12" fill="#1A1A1A">MS MARCO</text>
+    <text x="315" y="239" font-size="10" fill="#787570">acc 0.905</text>
+
+    <!-- NQ -->
+    <circle cx="395.65" cy="198.33" r="13.22" fill="#738F70" fill-opacity="0.78" stroke="#3A4D39" stroke-width="1"/>
+    <text x="415" y="196" font-size="12" fill="#1A1A1A">NQ</text>
+    <text x="415" y="210" font-size="10" fill="#787570">acc 0.761</text>
+
+    <!-- Wikipedia sections -->
+    <circle cx="504.13" cy="122.5" r="10.94" fill="#9B4D4D" fill-opacity="0.65" stroke="#9B4D4D" stroke-width="1"/>
+    <text x="521" y="120" font-size="12" fill="#1A1A1A">Wikipedia sections</text>
+    <text x="521" y="134" font-size="10" fill="#787570">acc 0.647</text>
+
+    <!-- arXiv titles -->
+    <circle cx="662.69" cy="227.5" r="13.08" fill="#738F70" fill-opacity="0.78" stroke="#3A4D39" stroke-width="1"/>
+    <text x="635" y="258" font-size="12" fill="#1A1A1A" text-anchor="middle">arXiv titles</text>
+    <text x="635" y="272" font-size="10" fill="#787570" text-anchor="middle">acc 0.754</text>
+  </g>
+
+  <!-- Inline size legend (top-right of plot area) -->
+  <g transform="translate(580, 80)">
+    <text x="0" y="0" font-size="10" font-style="italic" fill="#787570">dot size = centroid id accuracy</text>
+    <circle cx="20" cy="20" r="7" fill="#787570" fill-opacity="0.55"/>
+    <text x="32" y="23" font-size="10" fill="#787570">0.5</text>
+    <circle cx="70" cy="20" r="12" fill="#787570" fill-opacity="0.55"/>
+    <text x="86" y="23" font-size="10" fill="#787570">0.75</text>
+    <circle cx="125" cy="20" r="17" fill="#787570" fill-opacity="0.55"/>
+    <text x="146" y="23" font-size="10" fill="#787570">0.95</text>
+  </g>
+</svg>

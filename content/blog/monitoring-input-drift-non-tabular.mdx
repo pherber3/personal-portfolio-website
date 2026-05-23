@@ -1,0 +1,281 @@
+---
+title: "Monitoring Input Drift When Your Inputs Aren't Tabular"
+date: "2026-05-23"
+excerpt: "Standard drift-detection tools break on embedding spaces. The natural replacement is to watch centroids move, and centroid distance is secretly the simplest case of a much stronger test, Maximum Mean Discrepancy. A one-shot geometric measurement tells you which version you need."
+tags: ["mlops", "system-design", "embeddings", "mmd", "kernel-methods"]
+readingTime: 25
+---
+
+<Callout title="Authorship Note">
+Visualization scripts, as well as prose and argument refinement used the assistance of Claude Opus 4.7. The argument, structure, and technical claims are my own.
+</Callout>
+
+Input drift monitoring is a solved problem for traditional machine learning. If your model takes tabular features, you could (for example) run a Kolmogorov–Smirnov test or compute Population Stability Index (PSI) per numeric column, a chi-squared test per categorical column, set thresholds, and put it on a dashboard. Recently I've been thinking about how more and more deployed models take unstructured inputs (text, images, audio, or any combination of multimodal inputs) and the standard tools stop working in this setting. Embedding spaces are high dimensional, and running KS on anywhere from hundreds to thousands of individual coordinates loses all joint structure. Chip Huyen's *Designing Machine Learning Systems* (pretty much the standard reference textbook on this kind of question) is explicit about the gap:
+
+> Because two-sample tests often work better on low-dimensional data than on high-dimensional data, it's highly recommended that you reduce the dimensionality of your data before performing a two-sample test on it.
+
+The textbook does not say *how* to reduce dimensionality for unstructured input, and the answer I've come to is moreso that you *don't* reduce dimensions, you switch to two-sample tests built to handle high-dimensional data directly.
+
+My first instinct was to compute the centroid of the training embeddings, compute the centroid of a recent production window, and watch the distance between them. It seems reasonable since the centroid summarizes the distribution, and if it moves something has changed. It turns out that it can work, but only under certain conditions. The question is which conditions, and what to do when they don't hold.
+
+<TableOfContents sections={[
+  { id: "watching-the-centroids", title: "Watching the Centroids" },
+  { id: "what-centroids-miss", title: "What Centroids Miss" },
+  { id: "from-centroids-to-mmd", title: "From Centroids to MMD" },
+  { id: "why-not-wasserstein", title: "Why Not Wasserstein?" },
+  { id: "the-classifier-trick", title: "The Classifier Trick" },
+  { id: "when-is-centroid-enough", title: "When Is Centroid Enough?" },
+  { id: "a-practical-recipe", title: "A Practical Recipe" },
+  { id: "what-doesnt-work", title: "What Doesn't Work" },
+  { id: "open-questions", title: "Open Questions" },
+  { id: "references", title: "References" },
+]} />
+
+---
+
+## Watching the Centroids
+
+The centroid-monitoring setup:
+
+$$\bar{x} = \frac{1}{n}\sum_{i=1}^n x_i, \qquad \bar{y} = \frac{1}{m}\sum_{j=1}^m y_j, \qquad \text{alert when } \|\bar{x} - \bar{y}\|_2 > \text{threshold}.$$
+
+Under the null hypothesis of no shift, the standard error of the empirical centroid is about $\sigma / \sqrt{n}$, where $\sigma$ is the per-coordinate standard deviation and $n$ is the window size. This rate survives in high dimensions via concentration of measure: $D$-dimensional embeddings concentrate on a thin shell of radius $\sqrt{D}$, and independent embeddings are nearly orthogonal, so the centroid's norm fluctuates by $O(\sigma/\sqrt{n})$ regardless of $D$. A movement substantially larger than $\sigma/\sqrt{n}$ is the threshold for a "real shift."
+
+We see that centroid monitoring can work, and it's cheap, but when does it break down?
+
+---
+
+## What Centroids Miss
+
+Centroid distance captures exactly the first moment of the distribution. Due to this limitation, there are three kinds of shifts it cannot detect:
+
+<Figure
+  src="/blog/centroids-miss.svg"
+  alt="Three side-by-side scatter plots illustrating distribution shifts that preserve the mean. In each panel, training points are shown in light gray and production points in dark green, with a shared centroid marked by a black cross. Panel 1 (Bimodal split): two modes pulled symmetrically apart. Panel 2 (Variance shift): production blob expands around the same center. Panel 3 (Subpopulation drift): two subpopulations shift in opposite directions, cancelling at the mean."
+  caption="Three distribution shifts the centroid cannot see. In every panel, training (gray) and production (green) share the same centroid (×) by construction, yet the production distribution is materially different in each case."
+/>
+
+**Multimodal collapse with stable mean.** A bimodal distribution where half the mass shifts left and half shifts right, keeping the centroid in place. $\|\bar{x} - \bar{y}\|_2 = 0$ but the distribution has changed. Text embeddings cluster by topic, and a topic shift within a cluster can preserve the centroid while changing shape.
+
+**Variance and spread shifts.** The centroid is invariant to scale. Production data becoming more spread out or more concentrated than training won't move the centroid, but downstream model performance depends on how inputs are distributed across the embedding space, not just where the center of mass is.
+
+**Subpopulation drift in mixtures.** One component of a mixture shifts while others compensate, keeping the global centroid nearly fixed.
+
+Therefore, whether centroid monitoring is adequate depends on the geometry of the embedding clusters. Before measuring that geometry, we need to place centroid distance in its proper context: it is not a heuristic, it is the simplest member of a parameterized family of two-sample tests, and the same family contains the test we will want for the cases where centroid is not enough.
+
+---
+
+## From Centroids to MMD
+
+Centroid distance misses distributional shape because it only sees the first moment. To capture the full distribution, we need a two-sample test that is sensitive to higher-order structure. The framework for this is integral probability metrics (IPMs). An IPM measures the discrepancy between two distributions $P$ and $Q$ by finding the function $f$ in a class $\mathcal{F}$ where the expectations disagree most:
+
+$$D_\mathcal{F}(P, Q) = \sup_{f \in \mathcal{F}} \left| \mathbb{E}_P[f] - \mathbb{E}_Q[f] \right|$$
+
+The witness function $f^*$ points in the direction where $P$ and $Q$ differ the most. The choice of $\mathcal{F}$ determines the divergence:
+
+- 1-Lipschitz functions → 1-Wasserstein distance
+- Unit ball of a reproducing kernel Hilbert space (RKHS) → **Maximum Mean Discrepancy (MMD)**
+- Indicators of half-spaces → total variation distance
+
+MMD uses $\mathcal{F}$ as the unit ball of the RKHS associated with a kernel $k$. Written in terms of kernel mean embeddings $\mu_P = \mathbb{E}_{x \sim P}[\phi(x)]$:
+
+$$\text{MMD}(P, Q) = \left\| \mu_P - \mu_Q \right\|_\mathcal{H}$$
+
+The kernel mean embedding $\mu_P$ is a generalization of the empirical mean. For different choices of the feature map $\phi$:
+
+| Choice of $\phi$ / kernel | What MMD reduces to | What it captures |
+|---|---|---|
+| $\phi(x) = x$ (linear kernel) | $\|\bar{x}_P - \bar{x}_Q\|_2$ | Mean only |
+| $\phi(x) = [x, x \otimes x]$ (polynomial degree 2) | — | Mean + variance |
+| Gaussian RBF kernel | Full distributional test | All moments; MMD = 0 iff $P = Q$ |
+
+<Callout title="Kernel Inception Distance">
+KID (Kernel Inception Distance), used for evaluating image generation (Bińkowski et al. 2018), is Gaussian-kernel MMD on Inception features. The "Inception" part is a specific choice of feature map, the Inception-v3 classifier. The generalization to whatever encoder your deployment pipeline uses (CLIP, SigLIP, BGE-M3, your fine-tuned SBERT, etc.) is direct. Use the serving encoder as the feature map. No retraining or separate model needed.
+</Callout>
+
+Centroid distance is the linear-kernel row of this table. The Gaussian RBF kernel, $K(x, x') = \exp(-\|x - x'\|^2 / (2\sigma^2))$, is a smooth similarity function that decays with squared distance, and it is *characteristic*: MMD = 0 if and only if $P = Q$. Its unbiased $U$-statistic estimator is:
+
+$$\widehat{\text{MMD}}^2 = \underbrace{\frac{1}{n(n-1)}\sum_{i \neq i'}K(x_i, x_{i'})}_{\text{within training}} + \underbrace{\frac{1}{m(m-1)}\sum_{j \neq j'}K(y_j, y_{j'})}_{\text{within production}} - \underbrace{\frac{2}{nm}\sum_{i,j}K(x_i, y_j)}_{\text{cross}}$$
+
+<Callout title="What is a U-statistic?">
+A $U$-statistic averages a symmetric function over all distinct tuples of samples, note the $i \neq i'$ and $j \neq j'$ in the sums above. The naive plug-in estimator $\frac{1}{n^2}\sum_{i,j}K(x_i, x_j)$ would include the diagonal terms $K(x_i, x_i)$, which estimate $\mathbb{E}[K(X, X)]$ rather than $\mathbb{E}[K(X, X')]$ for independent $X, X'$, and that mismatch biases the estimator upward. Dropping the diagonal removes the bias. The unbiased version can dip slightly negative under the null, which is exactly what gives you a usable null distribution to threshold against; the biased "V-statistic" version is non-negative and loses that signal.
+</Callout>
+
+The bandwidth $\sigma$ in the kernel is set by the median pairwise distance in the training set (the median heuristic). Under no shift, all three terms estimate the same quantity ($\mathbb{E}[K(X, X')]$ under $P$), and $\widehat{\text{MMD}}^2 \approx 0$ by cancellation. Under a shift, the cross-term shrinks since samples drawn from different distributions sit farther apart in feature space. The cancellation breaks, so the statistic grows.
+
+---
+
+## Why Not Wasserstein?
+
+MMD with a characteristic kernel is a principled test. But given that we are comparing two distributions in embedding space, a natural alternative is Wasserstein distance (optimal transport distance), which has a clean geometric interpretation as the minimum cost of transporting mass from $P$ to $Q$, and a rich literature. The answer is in the convergence rates.
+
+Let's take an example embedding space with $D = 768$, then the Wasserstein rate $O(n^{-1/768})$ means effectively no convergence from any realistic monitoring window. MMD needs roughly $n \sim 10^4$ samples regardless of $D$.
+
+<Figure
+  src="/blog/convergence-rates.svg"
+  alt="Log-log plot of relative estimation error versus sample size for MMD and Wasserstein at d=768. Both curves normalized to 1 at n=100. The MMD curve descends with slope -1/2; the Wasserstein d=768 curve is essentially flat across the plotted range. A vertical reference line at n=10^4 marks a typical monitoring window."
+  caption="Relative estimation error vs sample size, normalized to 1 at n=100. MMD's n⁻¹ᐟ² rate is dimension-free; Wasserstein's n⁻¹ᐟᵈ rate makes d=768 effectively non-converging across any realistic window. (Wasserstein at d=2 would coincide with the MMD curve. The issue is dimension, not optimal transport itself.)"
+/>
+
+| Divergence | Convergence rate | Works in $D = 768$? |
+|---|---|---|
+| Wasserstein $W_p$ | $O(n^{-1/d})$ | No |
+| MMD (characteristic kernel) | $O(n^{-1/2})$ | Yes |
+| Sinkhorn divergence | Interpolates between the two | Not worth the complexity |
+
+The Wasserstein rate adapts to intrinsic dimension on low-dimensional supports (Weed & Bach, 2019), so on tight-cluster text embeddings where the intrinsic dimension is small, Wasserstein may become tractable. But MMD does not require knowing the intrinsic dimensionality, so it is a safe default.
+
+---
+
+## The Classifier Trick
+
+Computing the Gaussian-kernel MMD $U$-statistic for every production window is straightforward but not the cheapest option. There is a simpler deployment path that also produces something MMD alone does not: a per-sample density-ratio estimate. MMD tells you *whether* the distribution shifted; the per-sample ratio tells you *which* samples are responsible and *how much* to upweight or downweight them when retraining.
+
+Label training samples $c = 0$ and production samples $c = 1$, then train a binary classifier $h(x) = p(c = 1 | x)$ on the combined set. By Bayes' rule:
+
+$$\frac{q(x)}{p(x)} = \frac{p(c=1|x)}{p(c=0|x)} \cdot \frac{p(c=0)}{p(c=1)}$$
+
+The first factor is the *odds* output by the classifier, $h(x)/(1-h(x))$. The second is a constant fixed by your training/production batch sizes. So one trained classifier gives you three things at once:
+
+1. **The density ratio itself.** $r(x) = h(x)/(1-h(x))$ from above. Per-sample weights for importance-weighted retraining, and a per-sample novelty score for triage. These weights blow up when $h(x) \to 1$ for production samples far from training support, so clip at some percentile, use log-ratio estimation, or regularize. The bare ratio is not as useful in practice.
+
+2. **AUC as a drift statistic.** AUC = 0.5 means no detectable shift. AUC approaching 1 means the distributions are linearly separable.
+
+3. **The witness function.** Under the linear loss, the optimal classifier is the IPM witness function, exactly the direction in feature space where $P$ and $Q$ differ most. High-confidence production-side predictions identify which inputs are most novel.
+
+The choice of loss function determines which $f$-divergence the classifier estimates: linear loss gives total variation, exponential loss gives Hellinger, logistic loss gives $\chi^2$. Cross-entropy (the standard choice) gives something close to KL divergence, and the AUC is a robust drift statistic regardless of the exact loss.
+
+So we have three deployment options: centroid distance (cheapest), Gaussian-kernel MMD (full test), and domain classifier (cheapest full test, with density ratio as a bonus). The question is when the cheapest option is enough.
+
+---
+
+## When Is Centroid Enough?
+
+We now have the answer to what centroid monitoring misses — shape. But the empirical question remains: for your data, does shape matter enough to outweigh the simplicity of centroid? This turns out to be decidable from a geometric measurement on the training set, and the answer comes from a seemingly unrelated problem.
+
+Embedding consolidation (compressing a cluster of embeddings to a small number of representatives for efficient retrieval) requires the same geometric measurement. Work on consolidation proves a universal lower bound on identity-retrieval error (Vangara & Gopinath, 2026):
+
+$$\varepsilon_\text{id}(\mathcal{C}, \mathcal{R}) \geq 1 - c_1 m \left(\frac{\theta'}{\bar{d}}\right)^{d_\text{eff}/2}$$
+
+where $\theta' = 1 - \theta$ for similarity threshold $\theta$. The bound is operator-agnostic. It holds for centroid, medoid, importance-weighted routing, adaptive selection, anything. What matters for our purposes is that the same $(d_\text{eff}, \bar{d})$ geometry that determines whether centroid compression is safe for retrieval also determines whether centroid drift detection is adequate for monitoring. Both arguments rest on the same thin-shell concentration of contrastive embeddings.
+
+The parameter space splits into two regimes:
+
+**Tight regime** ($\bar{d} < \theta'$, low local $d_\text{eff}$): The cluster mean is a near-sufficient statistic for the full distribution. Linear-kernel MMD (= centroid distance) is near-optimal. In the consolidation setting, the fixed centroid Pareto-dominates every adaptive variant (even an in-hindsight oracle) on real text corpora that sit inside this regime.
+
+**Spread regime** (high $d_\text{eff}$ or $\bar{d} \geq \theta'$): The centroid loses signal and higher-order moments are needed. Gaussian-kernel MMD provides these.
+
+Empirical data from six text corpora and multiple sentence encoders:
+
+| Corpus | $d_\text{eff,local}$ (median) | $\bar{d}$ | Centroid id accuracy |
+|---|---|---|---|
+| DRM templated | 2.3 | 0.05 | 0.942 |
+| HotpotQA | 1.5 | 0.48 | 0.487 |
+| MS MARCO | 5.5 | 0.33 | 0.905 |
+| NQ | 12.6 | 0.38 | 0.761 |
+| Wikipedia sections | 30.1 | 0.51 | 0.647 |
+| arXiv titles | 107.5 | 0.33 | 0.754 |
+
+<Figure
+  src="/blog/regime-scatter.svg"
+  alt="Scatter of six text corpora on (local effective dimension, average intra-cluster distance). Dot size encodes centroid identity-retrieval accuracy. A shaded region in the lower-left marks the tight regime where centroid monitoring is sufficient. DRM templated and MS MARCO sit deep inside the tight region with large dots; HotpotQA sits just above the regime boundary with a tiny dot despite low effective dimension; Wikipedia sections and arXiv titles sit in the spread region."
+  caption="Each corpus on the (d_eff, d̄) plane. Dot size = centroid id accuracy. Tight regime (shaded) is the joint condition d_eff small AND d̄ < θ′; HotpotQA sits just outside it because d̄ alone exceeds the threshold, despite the lowest effective dimension in the set."
+/>
+
+Two things to note:
+
+The joint quantity $(d_\text{eff}, \bar{d})$ orders the corpora, not either number alone. HotpotQA has the lowest $d_\text{eff}$ (1.5) but the worst centroid accuracy (0.487). The reason is $\bar{d} = 0.48 > 0.2 = \theta'$, so the cluster is spread (high average internal distance) and a single vector cannot summarize it regardless of $d_\text{eff}$.
+
+MS MARCO shows the converse direction. Its $\bar{d} = 0.33$ also exceeds $\theta'$, so by the strict joint criterion it is outside the tight regime, yet centroid accuracy is 0.905. With $d_\text{eff} = 5.5$ the cluster is so close to one-dimensional that a single vector still captures most of the structure even though the cluster is not particularly tight. The boundary is two-dimensional: corpora just outside the strict box can fall either way depending on which axis is the source of the violation.
+
+The boundary is fuzzy but useful. Single-digit to low-teens $d_\text{eff}$ with $\bar{d} < \theta'$: tight regime, centroid is adequate. Above that (Wikipedia sections at 30.1, arXiv titles at 107.5) and you're in the spread regime, use Gaussian-kernel MMD. Importantly, this is an empirical heuristic from one paper's tested corpora, not a theorem; ablate on your own data when near the boundary.
+
+Computing $(d_\text{eff,local}, \bar{d})$ on training embeddings takes seconds. The participation ratio $d_\text{eff} = (\sum \lambda_i)^2 / \sum \lambda_i^2$ comes from the eigenvalues of the per-cluster covariance; $\bar{d}$ is the average cosine distance within the cluster. One measurement, done once on training data, tells you which monitoring detector to deploy, and answers the retrieval question (whether fixed-centroid compression is safe for your index) at the same time.
+
+---
+
+## A Practical Recipe
+
+Pulling this together into a deployable pipeline:
+
+1. **Feature space.** Use the serving encoder $\phi$, the same embeddings your model already produces. No separate encoder for monitoring.
+
+2. **One-time geometric diagnostic.** Compute per-cluster $(d_\text{eff,local}, \bar{d})$ on the training embeddings. This determines the primary detector.
+
+3. **Primary detector.**
+   - **Tight regime:** centroid distance, $\|\bar{\phi}_\text{train} - \bar{\phi}_\text{prod}\|_2$, alerting when movement substantially exceeds $\sigma/\sqrt{n}$ (the null standard error from §"Watching the Centroids"). This is the linear-kernel row of the MMD table, cheap, interpretable, and statistically adequate in this regime.
+   - **Spread regime:** Gaussian-kernel MMD with the unbiased $U$-statistic, bandwidth $\sigma$ from the median heuristic.
+
+4. **Secondary detector and triage tool.** Train a domain classifier on (train, prod). AUC is your drift statistic. High-confidence production-side predictions identify which inputs are most novel. The classifier's odds $h(x)/(1-h(x))$ give you a per-sample density ratio for importance-weighted retraining.
+
+5. **Encoder version tracking.** The entire pipeline is conditional on $\phi$ being fixed. When the encoder is updated (model refresh, embedding-model swap, fine-tune), the same inputs map to different vectors and every threshold must be recalibrated. Pin the encoder version, log it with every detector reading, recalibrate on change.
+
+| Scenario | $d_\text{eff,local}$ | $\bar{d}$ vs $\theta'$ | Primary detector |
+|---|---|---|---|
+| Tight (DRM, MS MARCO) | 2–6 | $\bar{d} \ll \theta'$ | Centroid distance |
+| Borderline (NQ) | 12 | $\bar{d} < \theta'$, close | Centroid + classifier AUC |
+| Spread (arXiv titles) | 100+ | small $\bar{d}$, high $d_\text{eff}$ | Gaussian-kernel MMD + classifier |
+
+---
+
+## What Doesn't Work
+
+Several approaches come up in practice that should be avoided:
+
+**KS/PSI per embedding coordinate.** Each coordinate of an embedding vector has no semantic meaning — the joint structure is what matters. Per-coordinate tests lose all joint structure, produce 768+ simultaneous tests (alert fatigue), and the per-coordinate null is dominated by quasi-orthogonality noise. The same anti-pattern as running KS on raw image pixels.
+
+**Wasserstein distance in embedding space.** The $O(n^{-1/d})$ convergence rate makes it infeasible for $D = 768$ from any realistic monitoring window. Sinkhorn divergence partially fixes this by interpolating toward MMD as entropic regularization grows, but adds implementation complexity for no statistical benefit when the goal is detection rather than transport.
+
+**PCA then KS.** Reduces dimension but selects maximum-variance directions, which are not the directions $P$ and $Q$ differ along. The classifier-based approach learns the projection that maximally separates the two distributions.
+
+**Centroid as the only detector, everywhere.** Centroid is adequate in the tight regime and inadequate in the spread regime. The geometric diagnostic determines which. Centroid is a kernel choice (the linear kernel) that is sometimes sufficient and sometimes not, and the choice is decidable from data.
+
+---
+
+## Open Questions
+
+**Kernel bandwidth selection for production.** The median heuristic is the default and works in most cases, but Sutherland et al. (2017) note a specific failure mode: it underperforms when the scale on which $P$ and $Q$ differ is different from the scale of their overall variation, since the bandwidth ends up tuned to the wrong scale. Their power-maximization approach (choose $\sigma$ to maximize $\text{MMD}^2 / \sqrt{V_m}$, the ratio of the squared statistic to its variance) addresses this, but it requires labeled drift events to optimize against. Realistic deployments don't have those. What is the right adaptive rule when you cannot assume a specific shift direction?
+
+**Conformal prediction for drift detection.** Distribution-free two-sample tests based on conformal prediction give finite-sample coverage guarantees without distributional assumptions. Whether these guarantees buy anything over MMD or classifier-AUC in practice is unclear. The distribution-free generality may be paying for coverage you don't need.
+
+**Multimodal-specific shifts.** When text and image are co-embedded by a CLIP-style encoder, monitoring on the joint embedding may hide modality-specific shifts. The fix is likely per-modality MMD plus joint MMD, with per-modality tests as diagnostics when the joint fires. This has not been systematically studied.
+
+**Detector lag versus cluster granularity.** Per-cluster centroid monitoring multiplies the alert surface. How this composes with the alert-fatigue problem that the standard literature documents for tabular features is an open practical question.
+
+---
+
+## References
+
+### MMD and Kernel Methods
+
+Gretton, A., Borgwardt, K.M., Rasch, M.J., Schölkopf, B., & Smola, A. (2012). A Kernel Two-Sample Test. _Journal of Machine Learning Research_, 13.
+
+Sriperumbudur, B.K., Fukumizu, K., Gretton, A., Schölkopf, B., & Lanckriet, G.R.G. (2012). On the Empirical Estimation of Integral Probability Metrics. _Electronic Journal of Statistics_, 6.
+
+Bińkowski, M., Sutherland, D.J., Arbel, M., & Gretton, A. (2018). Demystifying MMD GANs. _ICLR 2018_.
+
+Sutherland, D.J., Tung, H.-Y., Strathmann, H., De, S., Ramdas, A., Smola, A., & Gretton, A. (2017). Generative Models and Model Criticism via Optimized Maximum Mean Discrepancy. _ICLR 2017_.
+
+### Optimal Transport and Sample Complexity
+
+Peyré, G. & Cuturi, M. (2019). Computational Optimal Transport. _Foundations and Trends in Machine Learning_, 11(5-6).
+
+Weed, J. & Bach, F. (2019). Sharp Asymptotic and Finite-Sample Rates of Convergence of Empirical Measures in Wasserstein Distance. _Bernoulli_, 25(4A).
+
+### Density Ratio and Classification-Based Detection
+
+Sugiyama, M., Suzuki, T., & Kanamori, T. (2012). Density Ratio Estimation in Machine Learning. _Cambridge University Press_.
+
+### Embedding Consolidation and the Tight/Spread Regime
+
+Vangara, A.B. & Gopinath, A. (2026). The Geometry of Consolidation. _Preprint_.
+
+### Probability in High Dimensions
+
+Vershynin, R. (2018). High-Dimensional Probability: An Introduction with Applications in Data Science. _Cambridge University Press_.
+
+### ML Systems Design
+
+Huyen, C. (2022). Designing Machine Learning Systems. _O'Reilly Media_.
+
+Murphy, K.P. (2023). Probabilistic Machine Learning: Advanced Topics. _MIT Press_.
